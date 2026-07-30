@@ -37,7 +37,7 @@ import com.eter.undiamas.core.presentation.theme.AccentCheckIn
 import com.eter.undiamas.core.presentation.theme.AccentDiario
 import com.eter.undiamas.core.presentation.theme.AccentPerfil
 import com.eter.undiamas.features.diario.domain.DiaryEntry
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 

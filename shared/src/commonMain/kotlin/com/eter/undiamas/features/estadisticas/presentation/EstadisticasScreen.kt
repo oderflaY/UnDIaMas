@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.domain.model.RiskLevel
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.color
+import com.eter.undiamas.core.presentation.components.CleanDaysCalendar
 import com.eter.undiamas.core.presentation.components.GradientCard
 import com.eter.undiamas.core.presentation.emoji
 import com.eter.undiamas.core.presentation.formatStreak
@@ -34,7 +35,10 @@ import com.eter.undiamas.core.presentation.rememberNow
 import com.eter.undiamas.core.presentation.theme.AccentDiario
 import com.eter.undiamas.core.presentation.theme.AccentStats
 import com.eter.undiamas.core.presentation.theme.StatsBrush
-import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun EstadisticasScreen(state: AppState) {
@@ -44,6 +48,14 @@ fun EstadisticasScreen(state: AppState) {
     val now by rememberNow()
     val streak = state.sobrietyCounter.currentStreakSeconds(state.profile, now)
 
+    val timeZone = TimeZone.currentSystemDefault()
+    val today = now.toLocalDateTime(timeZone).date
+    val levelByDay = state.checkInHistory.byDay(state.checkIns, timeZone)
+    val registeredDays = state.checkInHistory.registeredDays(state.checkIns, timeZone)
+    val cleanDays = state.checkInHistory.cleanDays(state.checkIns, timeZone)
+    // Ventana de 28 días (4 semanas exactas) terminando hoy.
+    val calendarDays = (27 downTo 0).map { back -> today.minus(back, DateTimeUnit.DAY) }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -51,9 +63,25 @@ fun EstadisticasScreen(state: AppState) {
         Text("📊 Estadísticas", style = MaterialTheme.typography.headlineMedium)
 
         GradientCard(brush = StatsBrush) {
-            Text("CHECK-INS REGISTRADOS", style = MaterialTheme.typography.labelMedium)
-            Text("$total", style = MaterialTheme.typography.displayMedium)
-            Text("Racha actual: ${formatStreak(streak)}", style = MaterialTheme.typography.bodyMedium)
+            Text("DÍAS LIMPIOS REGISTRADOS", style = MaterialTheme.typography.labelMedium)
+            Text("$cleanDays", style = MaterialTheme.typography.displayMedium)
+            Text(
+                "De $registeredDays días con check-in · Racha actual: ${formatStreak(streak)}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceVariant) {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("Tus últimas 4 semanas", style = MaterialTheme.typography.titleMedium)
+                CleanDaysCalendar(days = calendarDays, levelByDay = levelByDay, today = today)
+                Text(
+                    "Cada casilla es un día. Se colorea con el semáforo de tu check-in; " +
+                        "hueca significa que ese día no registraste.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceVariant) {

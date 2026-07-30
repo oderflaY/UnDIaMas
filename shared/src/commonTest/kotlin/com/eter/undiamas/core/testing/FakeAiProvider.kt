@@ -4,7 +4,7 @@ import com.eter.undiamas.core.domain.ai.AiProvider
 import com.eter.undiamas.core.domain.model.AiMessage
 import com.eter.undiamas.core.domain.model.AiMessageRole
 import com.eter.undiamas.core.domain.model.RiskLevel
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 class FakeAiProvider(
     private val responsesByRiskLevel: Map<RiskLevel, String> = mapOf(

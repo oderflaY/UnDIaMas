@@ -34,7 +34,7 @@ import com.eter.undiamas.core.presentation.theme.AccentAsistente
 import com.eter.undiamas.core.presentation.theme.Violet60
 import com.eter.undiamas.core.presentation.theme.accentBrush
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 @Composable
 fun IaScreen(state: AppState) {

@@ -1,5 +1,6 @@
 package com.eter.undiamas.features.inicio.presentation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,7 +43,8 @@ import com.eter.undiamas.core.presentation.theme.EmergencyBrush
 import com.eter.undiamas.core.presentation.theme.HeroBrush
 import com.eter.undiamas.core.presentation.theme.Mint60
 import com.eter.undiamas.core.presentation.theme.Violet80
-import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun InicioScreen(state: AppState, navigator: Navigator) {
@@ -50,8 +52,14 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
     val streakSeconds = state.sobrietyCounter.currentStreakSeconds(state.profile, now)
     val record = state.profile.recordStreakSeconds
     val message = state.sobrietyCounter.motivationalMessage(streakSeconds, record)
-    val lastCheckIn = state.checkIns.firstOrNull()
     val progress = if (record > 0) streakSeconds.toFloat() / record else 1f
+
+    val timeZone = TimeZone.currentSystemDefault()
+    val today = now.toLocalDateTime(timeZone).date
+    // El semáforo del día debe salir del registro de HOY, no del último check-in sin más:
+    // si el último fue ayer, hoy vuelve a estar pendiente.
+    val todayLevel = state.checkInHistory.byDay(state.checkIns, timeZone)[today]
+    val cleanDays = state.checkInHistory.cleanDays(state.checkIns, timeZone)
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -84,9 +92,9 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
 
         item {
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().clickable { navigator.goTo(Screen.CheckIn) },
                 colors = CardDefaults.cardColors(
-                    containerColor = (lastCheckIn?.riskLevel?.color ?: MaterialTheme.colorScheme.outline)
+                    containerColor = (todayLevel?.color ?: MaterialTheme.colorScheme.outline)
                         .copy(alpha = 0.12f),
                 ),
             ) {
@@ -98,13 +106,21 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("SEMÁFORO DE HOY", style = MaterialTheme.typography.labelMedium)
                         Text(
-                            lastCheckIn?.let { "${it.riskLevel.emoji} ${it.riskLevel.label}" }
-                                ?: "Aún no haces tu check-in",
+                            todayLevel?.let { "${it.emoji} ${it.label}" } ?: "Registra tu día",
                             style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            if (todayLevel != null) {
+                                "✅ Día registrado · $cleanDays días limpios en total"
+                            } else {
+                                "Toca para responder tus preguntas de hoy"
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     TrafficLight(
-                        level = lastCheckIn?.riskLevel,
+                        level = todayLevel,
                         modifier = Modifier.height(22.dp).width(90.dp),
                     )
                 }

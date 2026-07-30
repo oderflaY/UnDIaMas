@@ -1,6 +1,6 @@
 package com.eter.undiamas.features.diario.domain
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.Serializable
 
 @Serializable

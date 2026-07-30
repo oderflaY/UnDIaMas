@@ -10,13 +10,14 @@ import com.eter.undiamas.core.domain.model.CheckInEntry
 import com.eter.undiamas.core.domain.model.TrustedContact
 import com.eter.undiamas.core.domain.model.UserProfile
 import com.eter.undiamas.features.calculadora.domain.SavingsCalculator
+import com.eter.undiamas.features.checkin.domain.CheckInHistory
 import com.eter.undiamas.features.checkin.domain.RiskAssessor
 import com.eter.undiamas.features.diario.domain.DiaryEntry
 import com.eter.undiamas.features.ia.data.MockAiProvider
 import com.eter.undiamas.features.ia.domain.AiConversationService
 import com.eter.undiamas.features.sobriedad.domain.SobrietyCounter
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 private const val SECONDS_PER_DAY = 60L * 60 * 24
 
@@ -45,6 +46,7 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
     val sobrietyCounter = SobrietyCounter()
     val savingsCalculator = SavingsCalculator()
     val riskAssessor = RiskAssessor()
+    val checkInHistory = CheckInHistory()
     val aiConversationService = AiConversationService(aiProvider)
 
     private var nextCheckInId = 0

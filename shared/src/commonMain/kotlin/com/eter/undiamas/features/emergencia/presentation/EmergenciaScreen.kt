@@ -22,12 +22,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.components.BreathingCircle
+import com.eter.undiamas.core.presentation.rememberPhoneDialer
 import com.eter.undiamas.core.presentation.theme.Coral60
 import com.eter.undiamas.core.presentation.theme.Violet60
 
 @Composable
 fun EmergenciaScreen(state: AppState) {
     val contact = state.profile.trustedContact
+    val dial = rememberPhoneDialer()
 
     Column(
         modifier = Modifier
@@ -65,12 +67,17 @@ fun EmergenciaScreen(state: AppState) {
                 }
             }
             Button(
-                onClick = { /* Fase 3: integrar marcado real o deep link telefónico */ },
+                onClick = { dial(contact.phone) },
                 colors = ButtonDefaults.buttonColors(containerColor = Coral60, contentColor = Color.White),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("📞  Llamar a ${contact.name}", style = MaterialTheme.typography.titleMedium)
             }
+            Text(
+                "Se abrirá tu app de teléfono con el número listo; tú decides cuándo marcar.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         } else {
             Text(
                 "Aún no registras un contacto de confianza. Agrégalo en tu perfil para tenerlo aquí a la mano.",

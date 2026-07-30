@@ -4,7 +4,7 @@ import com.eter.undiamas.core.domain.ai.AiProvider
 import com.eter.undiamas.core.domain.model.AiMessage
 import com.eter.undiamas.core.domain.model.AiMessageRole
 import com.eter.undiamas.core.domain.model.RiskLevel
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 /**
  * Implementación de marcador de posición del puerto [AiProvider] mientras Fase 3 integra

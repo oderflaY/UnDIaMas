@@ -28,7 +28,7 @@ import com.eter.undiamas.core.presentation.theme.AccentAhorro
 import com.eter.undiamas.core.presentation.theme.AccentDiario
 import com.eter.undiamas.core.presentation.theme.AccentStats
 import com.eter.undiamas.core.presentation.theme.SavingsBrush
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlin.math.roundToInt
 
 private const val PRECIO_CAFE = 45.0

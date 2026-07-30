@@ -1,7 +1,7 @@
 package com.eter.undiamas.features.sobriedad.domain
 
 import com.eter.undiamas.core.domain.model.UserProfile
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

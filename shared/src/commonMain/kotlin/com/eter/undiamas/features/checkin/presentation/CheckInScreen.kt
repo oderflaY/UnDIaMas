@@ -40,7 +40,7 @@ import com.eter.undiamas.core.presentation.components.TrafficLight
 import com.eter.undiamas.core.presentation.emoji
 import com.eter.undiamas.core.presentation.label
 import com.eter.undiamas.core.presentation.theme.AccentCheckIn
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 private data class Question(val key: String, val text: String)
 

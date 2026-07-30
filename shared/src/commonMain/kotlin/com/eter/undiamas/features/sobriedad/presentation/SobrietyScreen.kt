@@ -37,7 +37,7 @@ import com.eter.undiamas.core.presentation.streakDays
 import com.eter.undiamas.core.presentation.theme.HeroBrush
 import com.eter.undiamas.core.presentation.theme.Mint60
 import com.eter.undiamas.core.presentation.theme.Violet80
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 @Composable
 fun SobrietyScreen(state: AppState) {
