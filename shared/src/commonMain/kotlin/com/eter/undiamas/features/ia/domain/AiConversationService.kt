@@ -5,5 +5,6 @@ import com.eter.undiamas.core.domain.model.AiMessage
 import com.eter.undiamas.core.domain.model.RiskLevel
 
 class AiConversationService(private val aiProvider: AiProvider) {
-    suspend fun respond(prompt: String, riskLevel: RiskLevel, history: List<AiMessage>): AiMessage = TODO()
+    suspend fun respond(prompt: String, riskLevel: RiskLevel, history: List<AiMessage>): AiMessage =
+        aiProvider.generateResponse(prompt, riskLevel, history)
 }
