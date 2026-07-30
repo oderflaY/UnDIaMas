@@ -30,6 +30,7 @@ import com.eter.undiamas.core.presentation.components.GradientCard
 import com.eter.undiamas.core.presentation.emoji
 import com.eter.undiamas.core.presentation.formatStreak
 import com.eter.undiamas.core.presentation.label
+import com.eter.undiamas.core.presentation.rememberNow
 import com.eter.undiamas.core.presentation.theme.AccentDiario
 import com.eter.undiamas.core.presentation.theme.AccentStats
 import com.eter.undiamas.core.presentation.theme.StatsBrush
@@ -40,7 +41,8 @@ fun EstadisticasScreen(state: AppState) {
     val total = state.checkIns.size
     val byLevel = RiskLevel.entries.associateWith { level -> state.checkIns.count { it.riskLevel == level } }
     val max = (byLevel.values.maxOrNull() ?: 0).coerceAtLeast(1)
-    val streak = state.sobrietyCounter.currentStreakSeconds(state.profile, Clock.System.now())
+    val now by rememberNow()
+    val streak = state.sobrietyCounter.currentStreakSeconds(state.profile, now)
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),

@@ -30,7 +30,10 @@ import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.components.GradientCard
 import com.eter.undiamas.core.presentation.components.StreakRing
+import com.eter.undiamas.core.presentation.formatClock
 import com.eter.undiamas.core.presentation.formatStreak
+import com.eter.undiamas.core.presentation.rememberNow
+import com.eter.undiamas.core.presentation.streakDays
 import com.eter.undiamas.core.presentation.theme.HeroBrush
 import com.eter.undiamas.core.presentation.theme.Mint60
 import com.eter.undiamas.core.presentation.theme.Violet80
@@ -39,7 +42,7 @@ import kotlinx.datetime.Clock
 @Composable
 fun SobrietyScreen(state: AppState) {
     var showConfirm by remember { mutableStateOf(false) }
-    val now = Clock.System.now()
+    val now by rememberNow()
     val streakSeconds = state.sobrietyCounter.currentStreakSeconds(state.profile, now)
     val record = state.profile.recordStreakSeconds
     val progress = if (record > 0) streakSeconds.toFloat() / record else 1f
@@ -53,8 +56,8 @@ fun SobrietyScreen(state: AppState) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 StreakRing(
                     progress = progress,
-                    label = formatStreak(streakSeconds),
-                    caption = if (record > 0) "DE ${formatStreak(record)}" else "SIN RÉCORD AÚN",
+                    label = "${streakDays(streakSeconds)} d",
+                    caption = formatClock(streakSeconds),
                     ringColors = listOf(Color.White, Mint60, Violet80, Color.White),
                     trackColor = Color.White.copy(alpha = 0.25f),
                     size = 220,
@@ -82,7 +85,7 @@ fun SobrietyScreen(state: AppState) {
             ) {
                 Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("📅 DÍAS", style = MaterialTheme.typography.labelMedium)
-                    Text("${streakSeconds / 86_400}", style = MaterialTheme.typography.titleLarge)
+                    Text("${streakDays(streakSeconds)}", style = MaterialTheme.typography.titleLarge)
                 }
             }
         }

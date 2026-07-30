@@ -15,6 +15,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,8 +29,11 @@ import com.eter.undiamas.core.presentation.components.GradientCard
 import com.eter.undiamas.core.presentation.components.StreakRing
 import com.eter.undiamas.core.presentation.components.TrafficLight
 import com.eter.undiamas.core.presentation.emoji
+import com.eter.undiamas.core.presentation.formatClock
 import com.eter.undiamas.core.presentation.formatStreak
 import com.eter.undiamas.core.presentation.label
+import com.eter.undiamas.core.presentation.rememberNow
+import com.eter.undiamas.core.presentation.streakDays
 import com.eter.undiamas.core.presentation.theme.AccentAhorro
 import com.eter.undiamas.core.presentation.theme.AccentAsistente
 import com.eter.undiamas.core.presentation.theme.AccentCheckIn
@@ -42,7 +46,7 @@ import kotlinx.datetime.Clock
 
 @Composable
 fun InicioScreen(state: AppState, navigator: Navigator) {
-    val now = Clock.System.now()
+    val now by rememberNow()
     val streakSeconds = state.sobrietyCounter.currentStreakSeconds(state.profile, now)
     val record = state.profile.recordStreakSeconds
     val message = state.sobrietyCounter.motivationalMessage(streakSeconds, record)
@@ -64,12 +68,16 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     StreakRing(
                         progress = progress,
-                        label = formatStreak(streakSeconds),
-                        caption = if (record > 0) "RÉCORD ${formatStreak(record)}" else "TU PRIMER RÉCORD",
+                        label = "${streakDays(streakSeconds)} d",
+                        caption = formatClock(streakSeconds),
                         ringColors = listOf(Color.White, Mint60, Violet80, Color.White),
                         trackColor = Color.White.copy(alpha = 0.25f),
                     )
                 }
+                Text(
+                    if (record > 0) "🏆 Récord: ${formatStreak(record)}" else "🏆 Aún sin récord: este es el primero",
+                    style = MaterialTheme.typography.labelMedium,
+                )
                 Text(message, style = MaterialTheme.typography.bodyMedium)
             }
         }

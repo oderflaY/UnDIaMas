@@ -16,6 +16,9 @@ import com.eter.undiamas.features.ia.data.MockAiProvider
 import com.eter.undiamas.features.ia.domain.AiConversationService
 import com.eter.undiamas.features.sobriedad.domain.SobrietyCounter
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+
+private const val SECONDS_PER_DAY = 60L * 60 * 24
 
 /**
  * Estado en memoria compartido entre pantallas mientras Fase 3 conecta Auth/Firestore.
@@ -25,12 +28,14 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
     var profile: UserProfile by mutableStateOf(
         UserProfile(
             userId = "demo-user",
-            displayName = "Alex",
+            displayName = "",
             sobrietyStartDate = Clock.System.now(),
-            previousDailyExpense = 80.0,
-            trustedContact = TrustedContact(name = "Mar", phone = "55 0000 0000"),
         ),
     )
+        private set
+
+    /** Mientras sea false la app muestra el cuestionario inicial en vez del resto de pantallas. */
+    var isOnboarded: Boolean by mutableStateOf(false)
         private set
 
     val checkIns = mutableStateListOf<CheckInEntry>()
@@ -52,6 +57,26 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
 
     fun updateProfile(update: (UserProfile) -> UserProfile) {
         profile = update(profile)
+    }
+
+    /** Cierra el cuestionario inicial construyendo el perfil con lo que respondió la persona. */
+    fun completeOnboarding(
+        displayName: String,
+        daysSober: Long,
+        recordDays: Long,
+        previousDailyExpense: Double,
+        contactName: String,
+        contactPhone: String,
+    ) {
+        val now = Clock.System.now()
+        profile = profile.copy(
+            displayName = displayName.ifBlank { "Amigo/a" },
+            sobrietyStartDate = Instant.fromEpochSeconds(now.epochSeconds - daysSober * SECONDS_PER_DAY),
+            recordStreakSeconds = recordDays * SECONDS_PER_DAY,
+            previousDailyExpense = previousDailyExpense,
+            trustedContact = if (contactName.isBlank()) null else TrustedContact(contactName, contactPhone),
+        )
+        isOnboarded = true
     }
 
     fun registerCheckIn(entry: CheckInEntry) {

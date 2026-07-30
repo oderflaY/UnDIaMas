@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.components.GradientCard
 import com.eter.undiamas.core.presentation.formatStreak
+import com.eter.undiamas.core.presentation.rememberNow
 import com.eter.undiamas.core.presentation.theme.AccentAhorro
 import com.eter.undiamas.core.presentation.theme.AccentDiario
 import com.eter.undiamas.core.presentation.theme.AccentStats
@@ -38,7 +39,8 @@ private const val PRECIO_CONCIERTO = 900.0
 fun CalculadoraScreen(state: AppState) {
     var expenseText by remember { mutableStateOf(state.profile.previousDailyExpense.toString()) }
     val previousDailyExpense = expenseText.toDoubleOrNull() ?: 0.0
-    val streakSeconds = state.sobrietyCounter.currentStreakSeconds(state.profile, Clock.System.now())
+    val now by rememberNow()
+    val streakSeconds = state.sobrietyCounter.currentStreakSeconds(state.profile, now)
 
     val daily = state.savingsCalculator.dailySavings(previousDailyExpense)
     val weekly = state.savingsCalculator.weeklySavings(previousDailyExpense)

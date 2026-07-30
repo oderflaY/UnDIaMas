@@ -35,6 +35,7 @@ import com.eter.undiamas.features.emergencia.presentation.EmergenciaScreen
 import com.eter.undiamas.features.estadisticas.presentation.EstadisticasScreen
 import com.eter.undiamas.features.ia.presentation.IaScreen
 import com.eter.undiamas.features.inicio.presentation.InicioScreen
+import com.eter.undiamas.features.onboarding.presentation.OnboardingScreen
 import com.eter.undiamas.features.perfil.presentation.PerfilScreen
 import com.eter.undiamas.features.sobriedad.presentation.SobrietyScreen
 import kotlinx.coroutines.launch
@@ -57,6 +58,15 @@ fun App() {
     state.onNotify = { message -> scope.launch { snackbarHostState.showSnackbar(message) } }
 
     UnDiaMasTheme {
+        if (!state.isOnboarded) {
+            Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+            ) { padding ->
+                Box(modifier = Modifier.padding(padding)) { OnboardingScreen(state) }
+            }
+            return@UnDiaMasTheme
+        }
+
         val isTopLevel = bottomTabs.any { it.first == navigator.current }
 
         Scaffold(
