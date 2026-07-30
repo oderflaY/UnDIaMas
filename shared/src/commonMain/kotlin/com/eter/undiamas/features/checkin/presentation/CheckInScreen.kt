@@ -1,25 +1,32 @@
 package com.eter.undiamas.features.checkin.presentation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.domain.model.CheckInEntry
 import com.eter.undiamas.core.domain.model.RiskAssessment
@@ -27,8 +34,12 @@ import com.eter.undiamas.core.domain.model.RiskLevel
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.Navigator
 import com.eter.undiamas.core.presentation.Screen
-import com.eter.undiamas.core.presentation.color
+import com.eter.undiamas.core.presentation.brush
+import com.eter.undiamas.core.presentation.components.GradientCard
+import com.eter.undiamas.core.presentation.components.TrafficLight
+import com.eter.undiamas.core.presentation.emoji
 import com.eter.undiamas.core.presentation.label
+import com.eter.undiamas.core.presentation.theme.AccentCheckIn
 import kotlinx.datetime.Clock
 
 private data class Question(val key: String, val text: String)
@@ -57,25 +68,42 @@ fun CheckInScreen(state: AppState, navigator: Navigator) {
     var result by remember { mutableStateOf<RiskAssessment?>(null) }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text("Check-in", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-
         val assessment = result
         if (assessment == null) {
-            LinearProgressIndicator(
-                progress = { (stepIndex + 1f) / questions.size },
-                modifier = Modifier.fillMaxWidth(),
+            Text("Check-in de hoy", style = MaterialTheme.typography.headlineMedium)
+
+            // Barra de progreso por segmentos, uno por pregunta.
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                questions.indices.forEach { index ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(6.dp)
+                            .background(
+                                if (index <= stepIndex) AccentCheckIn else AccentCheckIn.copy(alpha = 0.18f),
+                                RoundedCornerShape(3.dp),
+                            ),
+                    )
+                }
+            }
+            Text(
+                "PREGUNTA ${stepIndex + 1} DE ${questions.size}",
+                style = MaterialTheme.typography.labelMedium,
+                color = AccentCheckIn,
             )
-            Text("Pregunta ${stepIndex + 1} de ${questions.size}", style = MaterialTheme.typography.labelMedium)
 
             val question = questions[stepIndex]
-            Text(question.text, style = MaterialTheme.typography.titleMedium)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(question.text, style = MaterialTheme.typography.headlineSmall)
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 listOf("si" to "Sí", "no" to "No").forEach { (value, label) ->
-                    OutlinedButton(
-                        modifier = Modifier.fillMaxWidth(),
+                    AnswerTile(
+                        label = label,
+                        accent = if (value == "si") MaterialTheme.colorScheme.error else AccentCheckIn,
+                        modifier = Modifier.weight(1f),
                         onClick = {
                             answers[question.key] = value
                             if (stepIndex < questions.lastIndex) {
@@ -92,39 +120,57 @@ fun CheckInScreen(state: AppState, navigator: Navigator) {
                                         riskLevel = assessed.riskLevel,
                                     ),
                                 )
+                                state.notify("Check-in guardado")
                             }
                         },
-                    ) { Text(label) }
+                    )
                 }
             }
         } else {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = assessment.riskLevel.color.copy(alpha = 0.12f)),
-            ) {
-                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            AnimatedVisibility(visible = true, enter = fadeIn() + scaleIn(initialScale = 0.9f)) {
+                GradientCard(brush = assessment.riskLevel.brush) {
+                    Text("RESULTADO DE TU CHECK-IN", style = MaterialTheme.typography.labelMedium)
                     Text(
-                        assessment.riskLevel.label,
-                        color = assessment.riskLevel.color,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        "${assessment.riskLevel.emoji}  ${assessment.riskLevel.label}",
+                        style = MaterialTheme.typography.headlineSmall,
                     )
                     Text(assessment.recommendation, style = MaterialTheme.typography.bodyLarge)
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        TrafficLight(
+                            level = assessment.riskLevel,
+                            modifier = Modifier.height(28.dp).fillMaxWidth(0.45f),
+                        )
+                    }
                 }
             }
+
             if (assessment.riskLevel == RiskLevel.ROJO) {
                 Button(
                     onClick = { navigator.goTo(Screen.Emergencia) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 ) {
-                    Text("Ir al protocolo de emergencia", fontWeight = FontWeight.Bold)
+                    Text("🆘 Ir al protocolo de emergencia")
                 }
             } else {
                 Button(onClick = { navigator.goTo(Screen.Inicio) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Volver a inicio")
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AnswerTile(label: String, accent: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = accent.copy(alpha = 0.13f),
+        contentColor = accent,
+        modifier = modifier.height(88.dp).clickable(onClick = onClick),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(label, style = MaterialTheme.typography.headlineSmall)
         }
     }
 }

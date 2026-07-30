@@ -1,39 +1,53 @@
 package com.eter.undiamas.features.inicio.presentation
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.Navigator
 import com.eter.undiamas.core.presentation.Screen
 import com.eter.undiamas.core.presentation.color
+import com.eter.undiamas.core.presentation.components.ActionTile
+import com.eter.undiamas.core.presentation.components.GradientCard
+import com.eter.undiamas.core.presentation.components.StreakRing
+import com.eter.undiamas.core.presentation.components.TrafficLight
+import com.eter.undiamas.core.presentation.emoji
 import com.eter.undiamas.core.presentation.formatStreak
 import com.eter.undiamas.core.presentation.label
+import com.eter.undiamas.core.presentation.theme.AccentAhorro
+import com.eter.undiamas.core.presentation.theme.AccentAsistente
+import com.eter.undiamas.core.presentation.theme.AccentCheckIn
+import com.eter.undiamas.core.presentation.theme.AccentDiario
+import com.eter.undiamas.core.presentation.theme.EmergencyBrush
+import com.eter.undiamas.core.presentation.theme.HeroBrush
+import com.eter.undiamas.core.presentation.theme.Mint60
+import com.eter.undiamas.core.presentation.theme.Violet80
 import kotlinx.datetime.Clock
 
 @Composable
 fun InicioScreen(state: AppState, navigator: Navigator) {
     val now = Clock.System.now()
     val streakSeconds = state.sobrietyCounter.currentStreakSeconds(state.profile, now)
-    val message = state.sobrietyCounter.motivationalMessage(streakSeconds, state.profile.recordStreakSeconds)
+    val record = state.profile.recordStreakSeconds
+    val message = state.sobrietyCounter.motivationalMessage(streakSeconds, record)
     val lastCheckIn = state.checkIns.firstOrNull()
+    val progress = if (record > 0) streakSeconds.toFloat() / record else 1f
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -41,70 +55,99 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Text(
-                "Hola, ${state.profile.displayName}",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
+            Text("Hola, ${state.profile.displayName} 👋", style = MaterialTheme.typography.headlineMedium)
         }
+
+        item {
+            GradientCard(brush = HeroBrush, onClick = { navigator.goTo(Screen.Sobriedad) }) {
+                Text("LLEVAS SOBRIO/A", style = MaterialTheme.typography.labelMedium)
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    StreakRing(
+                        progress = progress,
+                        label = formatStreak(streakSeconds),
+                        caption = if (record > 0) "RÉCORD ${formatStreak(record)}" else "TU PRIMER RÉCORD",
+                        ringColors = listOf(Color.White, Mint60, Violet80, Color.White),
+                        trackColor = Color.White.copy(alpha = 0.25f),
+                    )
+                }
+                Text(message, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+
         item {
             Card(
-                modifier = Modifier.fillMaxWidth().clickable { navigator.goTo(Screen.Sobriedad) },
+                modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    containerColor = (lastCheckIn?.riskLevel?.color ?: MaterialTheme.colorScheme.outline)
+                        .copy(alpha = 0.12f),
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             ) {
-                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Llevas sobrio/a", style = MaterialTheme.typography.labelLarge)
-                    Text(
-                        formatStreak(streakSeconds),
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(message, style = MaterialTheme.typography.bodyMedium)
-                    Text("Toca para ver el detalle →", style = MaterialTheme.typography.labelSmall)
-                }
-            }
-        }
-        item {
-            val riskColor = lastCheckIn?.riskLevel?.color ?: MaterialTheme.colorScheme.outline
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = riskColor.copy(alpha = 0.12f)),
-                border = BorderStroke(1.dp, riskColor.copy(alpha = 0.4f)),
-            ) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Semáforo de hoy", style = MaterialTheme.typography.labelLarge)
-                    Text(
-                        lastCheckIn?.riskLevel?.label ?: "Aún no haces tu check-in de hoy",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("SEMÁFORO DE HOY", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            lastCheckIn?.let { "${it.riskLevel.emoji} ${it.riskLevel.label}" }
+                                ?: "Aún no haces tu check-in",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+                    TrafficLight(
+                        level = lastCheckIn?.riskLevel,
+                        modifier = Modifier.height(22.dp).width(90.dp),
                     )
                 }
             }
         }
-        items(
-            listOf(
-                "Hacer check-in" to Screen.CheckIn,
-                "Escribir en el diario" to Screen.Diario,
-                "Calcular mi ahorro" to Screen.Calculadora,
-                "Hablar con el asistente" to Screen.Ia,
-            ),
-        ) { (label, screen) ->
-            OutlinedButton(onClick = { navigator.goTo(screen) }, modifier = Modifier.fillMaxWidth()) { Text(label) }
-        }
+
         item {
-            Button(
-                onClick = { navigator.goTo(Screen.Emergencia) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                ),
-            ) {
-                Text("Necesito ayuda ahora", fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                ActionTile(
+                    emoji = "✅",
+                    title = "Check-in",
+                    accent = AccentCheckIn,
+                    onClick = { navigator.goTo(Screen.CheckIn) },
+                    modifier = Modifier.weight(1f),
+                )
+                ActionTile(
+                    emoji = "📓",
+                    title = "Diario",
+                    accent = AccentDiario,
+                    onClick = { navigator.goTo(Screen.Diario) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                ActionTile(
+                    emoji = "💰",
+                    title = "Mi ahorro",
+                    accent = AccentAhorro,
+                    onClick = { navigator.goTo(Screen.Calculadora) },
+                    modifier = Modifier.weight(1f),
+                )
+                ActionTile(
+                    emoji = "💬",
+                    title = "Asistente",
+                    accent = AccentAsistente,
+                    onClick = { navigator.goTo(Screen.Ia) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+
+        item {
+            GradientCard(brush = EmergencyBrush, onClick = { navigator.goTo(Screen.Emergencia) }) {
+                Text("🆘 Necesito ayuda ahora", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Respiración guiada y tu contacto de confianza, a un toque.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
     }

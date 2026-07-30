@@ -2,24 +2,46 @@ package com.eter.undiamas.core.presentation.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Paleta cálida y calmada: violeta (confianza), verde-azulado (crecimiento), ámbar (motivación).
-val Violet40 = Color(0xFF5B4B9A)
-val Violet90 = Color(0xFFE9E1FF)
-val Violet20 = Color(0xFF2C2260)
+// ---- Núcleo de marca -------------------------------------------------------
+val Violet80 = Color(0xFF8B6FFF)
+val Violet60 = Color(0xFF6C4BF6)
+val Violet40 = Color(0xFF4A2FC7)
+val Violet95 = Color(0xFFEDE7FF)
+val Violet15 = Color(0xFF241160)
 
-val Teal40 = Color(0xFF3E8E7E)
-val Teal90 = Color(0xFFCFF3EA)
-val Teal20 = Color(0xFF0D3A31)
+val Mint60 = Color(0xFF00C4A7)
+val Mint40 = Color(0xFF00937D)
+val Mint95 = Color(0xFFC8F7EE)
+val Mint15 = Color(0xFF00382E)
 
-val Amber40 = Color(0xFFB8860B)
-val Amber90 = Color(0xFFFCE8BF)
-val Amber20 = Color(0xFF4A3400)
+val Amber60 = Color(0xFFFF9F1C)
+val Amber40 = Color(0xFFC97400)
+val Amber95 = Color(0xFFFFECD1)
+val Amber15 = Color(0xFF4A2A00)
 
-val Rose40 = Color(0xFFC62828)
-val Rose90 = Color(0xFFFFDAD6)
-val Rose20 = Color(0xFF5E0000)
+val Coral60 = Color(0xFFFF5A5F)
+val Coral40 = Color(0xFFC62F35)
+val Coral95 = Color(0xFFFFE1E1)
+val Coral15 = Color(0xFF5C0709)
 
-val Neutral99 = Color(0xFFFBF8FF)
-val Neutral10 = Color(0xFF1B1B23)
-val Neutral95 = Color(0xFFEDEAF4)
-val Neutral30 = Color(0xFF48454E)
+// ---- Acentos por módulo (para tarjetas y accesos rápidos) ------------------
+val AccentCheckIn = Color(0xFF3B82F6)   // azul
+val AccentDiario = Color(0xFFF59E0B)    // ámbar
+val AccentAhorro = Color(0xFF10B981)    // verde
+val AccentAsistente = Color(0xFFA855F7) // magenta
+val AccentStats = Color(0xFF6366F1)     // índigo
+val AccentPerfil = Color(0xFFEC4899)    // rosa
+
+// ---- Semáforo de riesgo ----------------------------------------------------
+val RiskGreen = Color(0xFF16A34A)
+val RiskYellow = Color(0xFFF59E0B)
+val RiskRed = Color(0xFFDC2626)
+
+// ---- Neutros ---------------------------------------------------------------
+val Surface99 = Color(0xFFFDFBFF)
+val SurfaceDim = Color(0xFFF1EDFA)
+val Ink10 = Color(0xFF16131F)
+val Ink30 = Color(0xFF453F55)
+val DarkSurface = Color(0xFF13111A)
+val DarkSurfaceElevated = Color(0xFF1E1B29)
+val DarkInk90 = Color(0xFFE9E5F5)
