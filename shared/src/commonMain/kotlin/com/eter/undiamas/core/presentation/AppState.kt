@@ -45,6 +45,11 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
     private var nextCheckInId = 0
     private var nextDiaryId = 0
 
+    /** La pantalla raíz reemplaza esto por una función que muestra un snackbar real. */
+    var onNotify: (String) -> Unit = {}
+
+    fun notify(message: String) = onNotify(message)
+
     fun updateProfile(update: (UserProfile) -> UserProfile) {
         profile = update(profile)
     }

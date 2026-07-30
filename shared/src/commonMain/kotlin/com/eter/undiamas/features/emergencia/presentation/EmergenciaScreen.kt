@@ -9,12 +9,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
@@ -26,7 +26,7 @@ fun EmergenciaScreen(state: AppState) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFC62828).copy(alpha = 0.08f))
+            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f))
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -42,19 +42,25 @@ fun EmergenciaScreen(state: AppState) {
         )
 
         if (contact != null) {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text("Tu contacto de confianza", style = MaterialTheme.typography.labelLarge)
-                    Text(contact.name, style = MaterialTheme.typography.titleLarge)
+                    Text(contact.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(contact.phone, style = MaterialTheme.typography.bodyMedium)
                 }
             }
             Button(
                 onClick = { /* Fase 3: integrar marcado real o deep link telefónico */ },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828)),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Llamar a ${contact.name}")
+                Text("Llamar a ${contact.name}", fontWeight = FontWeight.Bold)
             }
         } else {
             Text(
@@ -66,6 +72,7 @@ fun EmergenciaScreen(state: AppState) {
         Text(
             "Este momento pasará. Ya has llegado hasta aquí antes.",
             style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }

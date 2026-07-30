@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -15,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.formatStreak
@@ -35,11 +37,15 @@ fun CalculadoraScreen(state: AppState) {
     val total = state.savingsCalculator.totalSavings(previousDailyExpense, streakSeconds)
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Calculadora de ahorro", style = MaterialTheme.typography.headlineSmall)
-        Text("Llevas ${formatStreak(streakSeconds)} sin gastar en tu consumo previo.", style = MaterialTheme.typography.bodyMedium)
+        Text("Calculadora de ahorro", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(
+            "Llevas ${formatStreak(streakSeconds)} sin gastar en tu consumo previo.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
         OutlinedTextField(
             value = expenseText,
@@ -48,26 +54,38 @@ fun CalculadoraScreen(state: AppState) {
             modifier = Modifier.fillMaxWidth(),
         )
 
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("Ahorro total desde tu inicio", style = MaterialTheme.typography.labelLarge)
+                Text("$${total.roundToInt()}", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+            }
+        }
+
         listOf(
             "Ahorro diario" to daily,
             "Ahorro semanal" to weekly,
             "Ahorro mensual" to monthly,
-            "Ahorro total desde tu inicio" to total,
         ).forEach { (titulo, monto) ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(titulo, style = MaterialTheme.typography.labelLarge)
-                    Text("$${monto.roundToInt()}", style = MaterialTheme.typography.headlineSmall)
+                    Text("$${monto.roundToInt()}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+        ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Eso equivale a", style = MaterialTheme.typography.labelLarge)
                 Text(
                     "≈ ${(total / PRECIO_REFERENCIA_CAFE).roundToInt()} cafés",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                 )
             }
         }
