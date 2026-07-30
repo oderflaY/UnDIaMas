@@ -1,47 +1,81 @@
 package com.eter.undiamas
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import org.jetbrains.compose.resources.painterResource
+import com.eter.undiamas.core.presentation.AppState
+import com.eter.undiamas.core.presentation.Navigator
+import com.eter.undiamas.core.presentation.Screen
+import com.eter.undiamas.features.calculadora.presentation.CalculadoraScreen
+import com.eter.undiamas.features.checkin.presentation.CheckInScreen
+import com.eter.undiamas.features.configuracion.presentation.ConfiguracionScreen
+import com.eter.undiamas.features.diario.presentation.DiarioScreen
+import com.eter.undiamas.features.emergencia.presentation.EmergenciaScreen
+import com.eter.undiamas.features.estadisticas.presentation.EstadisticasScreen
+import com.eter.undiamas.features.ia.presentation.IaScreen
+import com.eter.undiamas.features.inicio.presentation.InicioScreen
+import com.eter.undiamas.features.perfil.presentation.PerfilScreen
+import com.eter.undiamas.features.sobriedad.presentation.SobrietyScreen
 
-import undiamas.shared.generated.resources.Res
-import undiamas.shared.generated.resources.compose_multiplatform
+private val bottomTabs = listOf(Screen.Inicio, Screen.CheckIn, Screen.Diario, Screen.Estadisticas, Screen.Perfil)
 
 @Composable
 @Preview
 fun App() {
+    val state = remember { AppState() }
+    val navigator = remember { Navigator() }
+
     MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
-            }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
+        val isTopLevel = bottomTabs.any { it == navigator.current }
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(navigator.current.label) },
+                    navigationIcon = {
+                        if (!isTopLevel) {
+                            TextButton(onClick = { navigator.back() }) { Text("←") }
+                        }
+                    },
+                )
+            },
+            bottomBar = {
+                if (isTopLevel) {
+                    NavigationBar {
+                        bottomTabs.forEach { screen ->
+                            NavigationBarItem(
+                                selected = navigator.current == screen,
+                                onClick = { navigator.goTo(screen) },
+                                icon = {},
+                                label = { Text(screen.label) },
+                            )
+                        }
+                    }
+                }
+            },
+        ) { padding ->
+            Box(modifier = Modifier.padding(padding)) {
+                when (navigator.current) {
+                    Screen.Inicio -> InicioScreen(state, navigator)
+                    Screen.Sobriedad -> SobrietyScreen(state)
+                    Screen.CheckIn -> CheckInScreen(state, navigator)
+                    Screen.Ia -> IaScreen(state)
+                    Screen.Diario -> DiarioScreen(state)
+                    Screen.Estadisticas -> EstadisticasScreen(state)
+                    Screen.Calculadora -> CalculadoraScreen(state)
+                    Screen.Emergencia -> EmergenciaScreen(state)
+                    Screen.Perfil -> PerfilScreen(state, navigator)
+                    Screen.Configuracion -> ConfiguracionScreen()
                 }
             }
         }
