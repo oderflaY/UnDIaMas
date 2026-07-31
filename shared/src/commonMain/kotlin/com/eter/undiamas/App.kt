@@ -139,6 +139,13 @@ fun App() {
                 }
             },
             snackbarHost = {
+                // Una coleccion que no cargo se avisa sin bloquear el resto de la app.
+                state.dataWarning?.let { warning ->
+                    LaunchedEffect(warning) {
+                        snackbarHostState.showSnackbar(warning)
+                        state.clearDataWarning()
+                    }
+                }
                 SnackbarHost(snackbarHostState) { data ->
                     Snackbar(
                         shape = MaterialTheme.shapes.medium,

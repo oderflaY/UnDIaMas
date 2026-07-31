@@ -38,6 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -86,6 +87,17 @@ class AppState(
     /** Fallo al arrancar la sesion (sin red, Firebase mal configurado). null si todo fue bien. */
     var startupError: String? by mutableStateOf(null)
         private set
+
+    /**
+     * Aviso de que alguna coleccion no se pudo cargar, sin ser fatal.
+     * La app sigue usable con lo que si cargo; esto solo lo hace visible.
+     */
+    var dataWarning: String? by mutableStateOf(null)
+        private set
+
+    fun clearDataWarning() {
+        dataWarning = null
+    }
 
     private var profileJob: Job? = null
     private var checkInsJob: Job? = null
@@ -205,38 +217,55 @@ class AppState(
         uid = newUid
         profile = profile.copy(userId = newUid)
 
+        // Cada listener va con .catch: un fallo de permisos o de red en CUALQUIERA de ellos
+        // se propagaria como excepcion no capturada dentro de la corrutina y mataria el
+        // proceso. Que falle el diario no puede tumbar el protocolo de emergencia.
         profileJob = scope.launch {
-            perfilRepository.observe(newUid).collect { loaded ->
-                if (loaded != null) {
-                    profile = loaded
-                    isOnboarded = true
+            perfilRepository.observe(newUid)
+                .catch { error ->
+                    dataWarning = "No se pudo cargar tu perfil: ${error.message}"
+                    // Sin esto la app se queda girando para siempre si el perfil falla.
+                    isLoading = false
                 }
-                isLoading = false
-            }
+                .collect { loaded ->
+                    if (loaded != null) {
+                        profile = loaded
+                        isOnboarded = true
+                    }
+                    isLoading = false
+                }
         }
         checkInsJob = scope.launch {
-            checkInRepository.observeRecent(newUid).collect { entries ->
-                checkIns.clear()
-                checkIns.addAll(entries)
-            }
+            checkInRepository.observeRecent(newUid)
+                .catch { error -> dataWarning = "No se pudieron cargar tus check-ins: ${error.message}" }
+                .collect { entries ->
+                    checkIns.clear()
+                    checkIns.addAll(entries)
+                }
         }
         diaryJob = scope.launch {
-            diaryRepository.observeRecent(newUid).collect { entries ->
-                diaryEntries.clear()
-                diaryEntries.addAll(entries)
-            }
+            diaryRepository.observeRecent(newUid)
+                .catch { error -> dataWarning = "No se pudo cargar tu diario: ${error.message}" }
+                .collect { entries ->
+                    diaryEntries.clear()
+                    diaryEntries.addAll(entries)
+                }
         }
         moodJob = scope.launch {
-            moodRepository.observeRecent(newUid).collect { entries ->
-                moodEntries.clear()
-                moodEntries.addAll(entries)
-            }
+            moodRepository.observeRecent(newUid)
+                .catch { error -> dataWarning = "No se pudieron cargar tus animos: ${error.message}" }
+                .collect { entries ->
+                    moodEntries.clear()
+                    moodEntries.addAll(entries)
+                }
         }
         aiMessagesJob = scope.launch {
-            aiMessageRepository.observeRecent(newUid).collect { entries ->
-                aiMessages.clear()
-                aiMessages.addAll(entries)
-            }
+            aiMessageRepository.observeRecent(newUid)
+                .catch { error -> dataWarning = "No se pudo cargar la conversacion: ${error.message}" }
+                .collect { entries ->
+                    aiMessages.clear()
+                    aiMessages.addAll(entries)
+                }
         }
     }
 
