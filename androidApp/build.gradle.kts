@@ -15,6 +15,9 @@ dependencies {
 
     implementation(libs.androidx.activity.compose)
 
+    // Lectura de la pulsera vía Health Connect (Android-only: por eso vive aquí y no en :shared).
+    implementation(libs.androidx.healthConnect)
+
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)
 }

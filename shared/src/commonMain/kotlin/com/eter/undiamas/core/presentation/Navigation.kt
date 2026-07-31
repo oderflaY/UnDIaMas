@@ -17,6 +17,7 @@ enum class Screen(val label: String) {
     Capsulas("Cápsulas"),
     Habitos("Hábitos"),
     Anclas("Anclas"),
+    Biometria("Biometría"),
     Perfil("Perfil"),
     Configuracion("Configuración"),
 }

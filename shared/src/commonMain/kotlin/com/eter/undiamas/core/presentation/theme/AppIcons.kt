@@ -4,6 +4,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Anchor
+import androidx.compose.material.icons.rounded.DirectionsWalk
+import androidx.compose.material.icons.rounded.MonitorHeart
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.PhotoCamera
@@ -159,6 +161,10 @@ object AppIcons {
     val AnclaMeta: ImageVector = Icons.Rounded.Flag
     val AnclaLugar: ImageVector = Icons.Rounded.Place
     val AnclaRecuerdo: ImageVector = Icons.Rounded.PhotoCamera
+
+    // Biometría
+    val Corazon: ImageVector = Icons.Rounded.MonitorHeart
+    val Pasos: ImageVector = Icons.Rounded.DirectionsWalk
 
     // Detonantes
     val Estres: ImageVector = Icons.Rounded.Warning

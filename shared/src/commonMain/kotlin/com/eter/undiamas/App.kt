@@ -43,6 +43,8 @@ import com.eter.undiamas.features.onboarding.presentation.OnboardingScreen
 import com.eter.undiamas.features.perfil.presentation.PerfilScreen
 import com.eter.undiamas.features.sobriedad.presentation.SobrietyScreen
 import kotlinx.coroutines.launch
+import com.eter.undiamas.features.biometria.presentation.BiometriaScreen
+import com.eter.undiamas.core.domain.biometrics.BiometricsProvider
 
 private val bottomTabs = listOf(
     Screen.Inicio to AppIcons.Inicio,
@@ -54,8 +56,8 @@ private val bottomTabs = listOf(
 
 @Composable
 @Preview
-fun App() {
-    val state = remember { AppState() }
+fun App(biometrics: BiometricsProvider? = null) {
+    val state = remember { AppState(biometricsProvider = biometrics) }
     val navigator = remember { Navigator() }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -125,13 +127,14 @@ fun App() {
                         Screen.CheckIn -> CheckInScreen(state, navigator)
                         Screen.Ia -> IaScreen(state)
                         Screen.Diario -> DiarioScreen(state)
-                        Screen.Estadisticas -> EstadisticasScreen(state)
+                        Screen.Estadisticas -> EstadisticasScreen(state, navigator)
                         Screen.Calculadora -> CalculadoraScreen(state)
                         Screen.Emergencia -> EmergenciaScreen(state, navigator)
                         Screen.UrgeSurfing -> UrgeSurfingScreen(state, navigator)
                         Screen.Capsulas -> CapsulasScreen(state)
                         Screen.Habitos -> HabitosScreen(state)
                         Screen.Anclas -> AnclasScreen(state)
+                        Screen.Biometria -> BiometriaScreen(state)
                         Screen.Perfil -> PerfilScreen(state, navigator)
                         Screen.Configuracion -> ConfiguracionScreen(state)
                     }

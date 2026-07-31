@@ -32,6 +32,7 @@ import com.eter.undiamas.features.sobriedad.domain.SobrietyCounter
 import kotlinx.datetime.LocalDate
 import kotlin.time.Clock
 import kotlin.time.Instant
+import com.eter.undiamas.core.domain.biometrics.BiometricsProvider
 
 private const val SECONDS_PER_DAY = 60L * 60 * 24
 
@@ -49,7 +50,10 @@ data class AppSettings(
  * Estado en memoria compartido entre pantallas mientras Fase 3 conecta Auth/Firestore.
  * No persiste entre reinicios; se reemplazará por repositorios reales sobre Firebase.
  */
-class AppState(aiProvider: AiProvider = MockAiProvider()) {
+class AppState(
+    aiProvider: AiProvider = MockAiProvider(),
+    val biometricsProvider: BiometricsProvider? = null,
+) {
     var profile: UserProfile by mutableStateOf(
         UserProfile(
             userId = "demo-user",

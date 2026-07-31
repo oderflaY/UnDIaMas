@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Lectura de la pulsera vía Health Connect: solo lo que consume el análisis. -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+
     <!-- Visibilidad de la app de teléfono para el protocolo de emergencia (Android 11+). -->
     <queries>
         <intent>
             <action android:name="android.intent.action.DIAL" />
             <data android:scheme="tel" />
         </intent>
+        <!-- Visibilidad del proveedor de Health Connect (Android 13 y anteriores). -->
+        <package android:name="com.google.android.apps.healthdata" />
     </queries>
 
     <application
@@ -24,7 +30,25 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Health Connect abre esta pantalla cuando la persona pide ver por qué
+                 la app quiere sus datos (Android 13 y anteriores). Va en MainActivity
+                 porque es la única Activity: toda la UI es Compose dentro de ella. -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
         </activity>
+
+        <!-- Mismo rationale para Android 14+, que usa esta acción del sistema. -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
     </application>
 
 </manifest>

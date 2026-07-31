@@ -17,6 +17,7 @@ kotlinx-datetime = "0.7.1"
 kotlinx-coroutines = "1.10.1"
 material3 = "1.11.0-alpha07"
 materialIcons = "1.7.3"
+healthConnect = "1.1.0"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
@@ -42,6 +43,7 @@ compose-components-resources = { module = "org.jetbrains.compose.components:comp
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 compose-materialIconsExtended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIcons" }
 compose-uiBackHandler = { module = "org.jetbrains.compose.ui:ui-backhandler", version.ref = "composeMultiplatform" }
+androidx-healthConnect = { module = "androidx.health.connect:connect-client", version.ref = "healthConnect" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
