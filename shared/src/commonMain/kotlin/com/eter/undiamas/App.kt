@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.Button
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
+import com.eter.undiamas.core.presentation.diagnoseStartupError
 
 private val bottomTabs = listOf(
     Screen.Inicio to "🏠",
@@ -68,19 +69,20 @@ fun App() {
     UnDiaMasTheme(darkTheme = state.settings.darkTheme) {
         // Un fallo de conexion no debe dejar la app en blanco ni tumbarla: se explica y se reintenta.
         state.startupError?.let { error ->
+            val diagnosis = diagnoseStartupError(error)
             Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Text("No pudimos conectar", style = MaterialTheme.typography.headlineSmall)
+                    Text(diagnosis.title, style = MaterialTheme.typography.headlineSmall)
                     Text(
-                        "Revisa tu conexión a internet e inténtalo de nuevo.",
+                        diagnosis.advice,
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        error,
+                        diagnosis.technicalDetail,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
