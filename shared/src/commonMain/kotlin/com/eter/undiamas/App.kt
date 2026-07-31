@@ -1,9 +1,6 @@
 package com.eter.undiamas
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +24,7 @@ import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.Navigator
 import com.eter.undiamas.core.presentation.Screen
 import com.eter.undiamas.core.presentation.theme.UnDiaMasTheme
+import com.eter.undiamas.core.presentation.theme.screenTransition
 import com.eter.undiamas.features.calculadora.presentation.CalculadoraScreen
 import com.eter.undiamas.features.checkin.presentation.CheckInScreen
 import com.eter.undiamas.features.configuracion.presentation.ConfiguracionScreen
@@ -57,11 +55,9 @@ fun App() {
     val scope = rememberCoroutineScope()
     state.onNotify = { message -> scope.launch { snackbarHostState.showSnackbar(message) } }
 
-    UnDiaMasTheme {
+    UnDiaMasTheme(darkTheme = state.settings.darkTheme) {
         if (!state.isOnboarded) {
-            Scaffold(
-                snackbarHost = { SnackbarHost(snackbarHostState) },
-            ) { padding ->
+            Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
                 Box(modifier = Modifier.padding(padding)) { OnboardingScreen(state) }
             }
             return@UnDiaMasTheme
@@ -90,7 +86,7 @@ fun App() {
                                 icon = { Text(emoji, style = MaterialTheme.typography.titleMedium) },
                                 label = { Text(screen.label, style = MaterialTheme.typography.labelSmall) },
                                 colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
                                     selectedTextColor = MaterialTheme.colorScheme.primary,
                                 ),
                             )
@@ -110,7 +106,7 @@ fun App() {
         ) { padding ->
             AnimatedContent(
                 targetState = navigator.current,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                transitionSpec = { screenTransition() },
                 modifier = Modifier.padding(padding),
                 label = "screen",
             ) { screen ->
@@ -125,7 +121,7 @@ fun App() {
                         Screen.Calculadora -> CalculadoraScreen(state)
                         Screen.Emergencia -> EmergenciaScreen(state)
                         Screen.Perfil -> PerfilScreen(state, navigator)
-                        Screen.Configuracion -> ConfiguracionScreen()
+                        Screen.Configuracion -> ConfiguracionScreen(state)
                     }
                 }
             }

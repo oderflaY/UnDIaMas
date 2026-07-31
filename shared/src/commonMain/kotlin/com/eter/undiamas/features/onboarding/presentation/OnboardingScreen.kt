@@ -32,8 +32,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.components.GradientCard
-import com.eter.undiamas.core.presentation.theme.HeroBrush
-import com.eter.undiamas.core.presentation.theme.Violet60
+import com.eter.undiamas.core.presentation.theme.PrimaryVioletBrush
+import com.eter.undiamas.core.presentation.theme.PrimaryVioletStart
 
 private const val TOTAL_STEPS = 5
 
@@ -60,7 +60,7 @@ fun OnboardingScreen(state: AppState) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        GradientCard(brush = HeroBrush) {
+        GradientCard(brush = PrimaryVioletBrush) {
             Text("BIENVENIDO/A A UN DÍA MÁS", style = MaterialTheme.typography.labelMedium)
             Text(
                 "Cuéntanos un poco de ti para acompañarte mejor",
@@ -76,13 +76,13 @@ fun OnboardingScreen(state: AppState) {
                         .weight(1f)
                         .height(6.dp)
                         .background(
-                            if (index <= step) Violet60 else Violet60.copy(alpha = 0.18f),
+                            if (index <= step) PrimaryVioletStart else PrimaryVioletStart.copy(alpha = 0.18f),
                             RoundedCornerShape(3.dp),
                         ),
                 )
             }
         }
-        Text("PASO ${step + 1} DE $TOTAL_STEPS", style = MaterialTheme.typography.labelMedium, color = Violet60)
+        Text("PASO ${step + 1} DE $TOTAL_STEPS", style = MaterialTheme.typography.labelMedium, color = PrimaryVioletStart)
 
         AnimatedContent(
             targetState = step,

@@ -14,11 +14,12 @@ val RiskLevel.color: Color
         RiskLevel.ROJO -> RiskRed
     }
 
+/** Degradado de fondo del resultado: calma, precaución y crisis. */
 val RiskLevel.brush: Brush
     get() = when (this) {
-        RiskLevel.VERDE -> Brush.linearGradient(listOf(RiskGreen, Color(0xFF4ADE80)))
-        RiskLevel.AMARILLO -> Brush.linearGradient(listOf(RiskYellow, Color(0xFFFBBF24)))
-        RiskLevel.ROJO -> Brush.linearGradient(listOf(RiskRed, Color(0xFFF87171)))
+        RiskLevel.VERDE -> Brush.linearGradient(listOf(RiskGreen, Color(0xFF059669)))
+        RiskLevel.AMARILLO -> Brush.linearGradient(listOf(RiskYellow, Color(0xFFD97706)))
+        RiskLevel.ROJO -> Brush.linearGradient(listOf(RiskRed, Color(0xFFB91C1C)))
     }
 
 val RiskLevel.label: String

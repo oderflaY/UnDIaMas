@@ -1,7 +1,6 @@
 package com.eter.undiamas.core.presentation.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -33,11 +32,32 @@ fun GradientCard(
         contentColor = contentColor,
         modifier = modifier
             .fillMaxWidth()
-            .let { if (onClick != null) it.clickable(onClick = onClick) else it },
+            .let { if (onClick != null) it.pressable(onClick) else it },
     ) {
         Column(
             modifier = Modifier.background(brush, shape).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
+            content = content,
+        )
+    }
+}
+
+/** Tarjeta plana sobre SurfaceDark, con presión elástica opcional. */
+@Composable
+fun SectionCard(
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = containerColor,
+        modifier = modifier.fillMaxWidth().let { if (onClick != null) it.pressable(onClick) else it },
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             content = content,
         )
     }
@@ -52,12 +72,11 @@ fun ActionTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = MaterialTheme.shapes.medium
     Surface(
-        shape = shape,
-        color = accent.copy(alpha = 0.13f),
+        shape = MaterialTheme.shapes.medium,
+        color = accent.copy(alpha = 0.15f),
         contentColor = MaterialTheme.colorScheme.onSurface,
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.pressable(onClick),
     ) {
         Column(
             modifier = Modifier.heightIn(min = 96.dp).padding(16.dp),
@@ -69,11 +88,11 @@ fun ActionTile(
     }
 }
 
-/** Fila de estadística compacta con punto de color. */
+/** Métrica compacta: etiqueta pequeña arriba, cifra grande abajo. */
 @Composable
-fun StatRow(label: String, value: String, accent: Color, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+fun StatBlock(label: String, value: String, accent: Color, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = accent)
-        Text(value, style = MaterialTheme.typography.titleLarge)
+        OdometerText(value, style = MaterialTheme.typography.headlineSmall)
     }
 }

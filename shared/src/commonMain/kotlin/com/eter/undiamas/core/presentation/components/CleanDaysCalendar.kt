@@ -15,6 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.domain.model.RiskLevel
 import com.eter.undiamas.core.presentation.color
@@ -33,7 +36,8 @@ fun CleanDaysCalendar(
     today: LocalDate,
     modifier: Modifier = Modifier,
 ) {
-    val emptyColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
+    val emptyColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
+    val emptyStroke = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
     val todayBorder = MaterialTheme.colorScheme.primary
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -47,10 +51,11 @@ fun CleanDaysCalendar(
                             .aspectRatio(1f)
                             .background(level?.color ?: emptyColor, RoundedCornerShape(8.dp))
                             .then(
-                                if (day == today) {
-                                    Modifier.border(2.dp, todayBorder, RoundedCornerShape(8.dp))
-                                } else {
-                                    Modifier
+                                // Los días sin registro llevan contorno punteado; hoy va con borde brillante.
+                                when {
+                                    day == today -> Modifier.border(2.dp, todayBorder, RoundedCornerShape(8.dp))
+                                    level == null -> Modifier.dashedBorder(emptyStroke)
+                                    else -> Modifier
                                 },
                             ),
                         contentAlignment = Alignment.Center,
@@ -69,4 +74,16 @@ fun CleanDaysCalendar(
             }
         }
     }
+}
+
+/** Contorno punteado para los días sin registro. */
+private fun Modifier.dashedBorder(color: Color): Modifier = drawBehind {
+    drawRoundRect(
+        color = color,
+        cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx()),
+        style = Stroke(
+            width = 1.5.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)),
+        ),
+    )
 }

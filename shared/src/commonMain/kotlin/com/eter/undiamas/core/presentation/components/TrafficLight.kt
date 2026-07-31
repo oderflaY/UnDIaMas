@@ -18,19 +18,24 @@ import com.eter.undiamas.core.presentation.theme.RiskRed
 import com.eter.undiamas.core.presentation.theme.RiskYellow
 
 /**
- * Semáforo de riesgo: tres luces en fila, la activa con un halo que late.
- * Con [level] nulo (aún sin check-in) las tres quedan apagadas.
+ * Semáforo de riesgo con las tres luces en orden rojo, amarillo y verde.
+ * La luz activa lleva un halo radiante que late entre 0.3 y 0.9 de opacidad;
+ * con [level] nulo (aún sin check-in) las tres quedan apagadas.
  */
 @Composable
 fun TrafficLight(level: RiskLevel?, modifier: Modifier = Modifier) {
     val pulse by rememberInfiniteTransition(label = "traffic").animateFloat(
-        initialValue = 0.55f,
-        targetValue = 1f,
+        initialValue = 0.3f,
+        targetValue = 0.9f,
         animationSpec = infiniteRepeatable(tween(1400), RepeatMode.Reverse),
         label = "pulse",
     )
 
-    val lights = listOf(RiskLevel.VERDE to RiskGreen, RiskLevel.AMARILLO to RiskYellow, RiskLevel.ROJO to RiskRed)
+    val lights = listOf(
+        RiskLevel.ROJO to RiskRed,
+        RiskLevel.AMARILLO to RiskYellow,
+        RiskLevel.VERDE to RiskGreen,
+    )
 
     Canvas(modifier = modifier) {
         val radius = size.height / 2f
@@ -44,7 +49,7 @@ fun TrafficLight(level: RiskLevel?, modifier: Modifier = Modifier) {
             if (isActive) {
                 drawCircle(
                     brush = Brush.radialGradient(
-                        colors = listOf(color.copy(alpha = 0.45f * pulse), Color.Transparent),
+                        colors = listOf(color.copy(alpha = pulse), Color.Transparent),
                         center = center,
                         radius = radius * 2.1f,
                     ),

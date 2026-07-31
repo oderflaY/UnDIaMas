@@ -1,6 +1,7 @@
 package com.eter.undiamas.features.ia.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -30,21 +33,79 @@ import com.eter.undiamas.core.domain.model.AiMessage
 import com.eter.undiamas.core.domain.model.AiMessageRole
 import com.eter.undiamas.core.domain.model.RiskLevel
 import com.eter.undiamas.core.presentation.AppState
-import com.eter.undiamas.core.presentation.theme.AccentAsistente
-import com.eter.undiamas.core.presentation.theme.Violet60
-import com.eter.undiamas.core.presentation.theme.accentBrush
+import com.eter.undiamas.core.presentation.components.TypingIndicator
+import com.eter.undiamas.core.presentation.components.pressable
+import com.eter.undiamas.core.presentation.theme.AssistantBrush
+import com.eter.undiamas.core.presentation.theme.AssistantMagentaStart
+import com.eter.undiamas.core.presentation.theme.PrimaryVioletBrush
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
+
+private val quickReplies = listOf(
+    "Tengo un impulso fuerte",
+    "Necesito una distracción",
+    "Ejercicio de gratitud",
+    "Ensayar decir que NO",
+)
 
 @Composable
 fun IaScreen(state: AppState) {
     var draft by remember { mutableStateOf("") }
+    var isTyping by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val lastRiskLevel = state.checkIns.firstOrNull()?.riskLevel
+    val lastRiskLevel = state.checkIns.firstOrNull()?.riskLevel ?: RiskLevel.VERDE
+
+    fun send(prompt: String) {
+        if (prompt.isBlank()) return
+        state.aiMessages.add(
+            0,
+            AiMessage(
+                id = "user-${state.aiMessages.size}",
+                userId = state.profile.userId,
+                role = AiMessageRole.USUARIO,
+                content = prompt,
+                sentAt = Clock.System.now(),
+            ),
+        )
+        draft = ""
+        scope.launch {
+            isTyping = true
+            // Pausa breve para que el indicador de escritura sea perceptible.
+            delay(700)
+            val response = state.aiConversationService.respond(
+                prompt = prompt,
+                riskLevel = lastRiskLevel,
+                history = state.aiMessages,
+            )
+            state.aiMessages.add(0, response)
+            isTyping = false
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            quickReplies.forEach { reply ->
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = AssistantMagentaStart.copy(alpha = 0.16f),
+                    modifier = Modifier.pressable({ send(reply) }),
+                ) {
+                    Text(
+                        reply,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = AssistantMagentaStart,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    )
+                }
+            }
+        }
+
         Box(modifier = Modifier.weight(1f)) {
-            if (state.aiMessages.isEmpty()) {
+            if (state.aiMessages.isEmpty() && !isTyping) {
                 Column(
                     modifier = Modifier.fillMaxSize().padding(24.dp),
                     verticalArrangement = Arrangement.Center,
@@ -54,7 +115,7 @@ fun IaScreen(state: AppState) {
                     Text(
                         "Cuéntame cómo te sientes hoy",
                         style = MaterialTheme.typography.titleMedium,
-                        color = AccentAsistente,
+                        color = AssistantMagentaStart,
                     )
                     Text(
                         "Estoy aquí para escucharte, sin juicios.",
@@ -68,6 +129,18 @@ fun IaScreen(state: AppState) {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
+                    if (isTyping) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+                                Surface(
+                                    shape = MaterialTheme.shapes.large,
+                                    color = AssistantMagentaStart.copy(alpha = 0.14f),
+                                ) {
+                                    TypingIndicator(color = AssistantMagentaStart)
+                                }
+                            }
+                        }
+                    }
                     items(state.aiMessages) { message -> ChatBubble(message) }
                 }
             }
@@ -83,29 +156,8 @@ fun IaScreen(state: AppState) {
             )
             Button(
                 enabled = draft.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentAsistente),
-                onClick = {
-                    val prompt = draft
-                    state.aiMessages.add(
-                        0,
-                        AiMessage(
-                            id = "user-${state.aiMessages.size}",
-                            userId = state.profile.userId,
-                            role = AiMessageRole.USUARIO,
-                            content = prompt,
-                            sentAt = Clock.System.now(),
-                        ),
-                    )
-                    draft = ""
-                    scope.launch {
-                        val response = state.aiConversationService.respond(
-                            prompt = prompt,
-                            riskLevel = lastRiskLevel ?: RiskLevel.VERDE,
-                            history = state.aiMessages,
-                        )
-                        state.aiMessages.add(0, response)
-                    }
-                },
+                colors = ButtonDefaults.buttonColors(containerColor = AssistantMagentaStart),
+                onClick = { send(draft) },
             ) { Text("➤") }
         }
     }
@@ -120,28 +172,19 @@ private fun ChatBubble(message: AiMessage) {
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
-        if (isUser) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth(0.82f)
-                    .background(accentBrush(Violet60), shape)
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text("TÚ", style = MaterialTheme.typography.labelMedium, color = Color.White)
-                Text(message.content, style = MaterialTheme.typography.bodyMedium, color = Color.White)
-            }
-        } else {
-            Surface(
-                shape = shape,
-                color = AccentAsistente.copy(alpha = 0.13f),
-                modifier = Modifier.fillMaxWidth(0.82f),
-            ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("ASISTENTE", style = MaterialTheme.typography.labelMedium, color = AccentAsistente)
-                    Text(message.content, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.84f)
+                .background(if (isUser) PrimaryVioletBrush else AssistantBrush, shape)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                if (isUser) "TÚ" else "🤖 ASISTENTE",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.85f),
+            )
+            Text(message.content, style = MaterialTheme.typography.bodyMedium, color = Color.White)
         }
     }
 }
