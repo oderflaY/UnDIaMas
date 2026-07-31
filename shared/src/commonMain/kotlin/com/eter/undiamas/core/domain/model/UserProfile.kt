@@ -5,11 +5,11 @@ import kotlinx.serialization.Serializable
 
 /** Rol de cada persona de la red de soporte, para saber a quién se está llamando. */
 @Serializable
-enum class SupportRole(val label: String, val emoji: String) {
-    PADRINO("Padrino / Sponsor", "🤝"),
-    TERAPEUTA("Terapeuta", "🩺"),
-    FAMILIAR("Familiar", "🏠"),
-    AMISTAD("Amistad", "💛"),
+enum class SupportRole(val label: String) {
+    PADRINO("Padrino / Sponsor"),
+    TERAPEUTA("Terapeuta"),
+    FAMILIAR("Familiar"),
+    AMISTAD("Amistad"),
 }
 
 @Serializable

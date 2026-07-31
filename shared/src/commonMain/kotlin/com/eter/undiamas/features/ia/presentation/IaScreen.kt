@@ -41,6 +41,9 @@ import com.eter.undiamas.core.presentation.theme.PrimaryVioletBrush
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
+import com.eter.undiamas.core.presentation.theme.AppIcons
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 
 private val quickReplies = listOf(
     "Tengo un impulso fuerte",
@@ -111,7 +114,12 @@ fun IaScreen(state: AppState) {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("💬", style = MaterialTheme.typography.displayMedium)
+                    Icon(
+                        AppIcons.Asistente,
+                        contentDescription = null,
+                        tint = AssistantMagentaStart,
+                        modifier = Modifier.size(56.dp),
+                    )
                     Text(
                         "Cuéntame cómo te sientes hoy",
                         style = MaterialTheme.typography.titleMedium,
@@ -158,7 +166,7 @@ fun IaScreen(state: AppState) {
                 enabled = draft.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = AssistantMagentaStart),
                 onClick = { send(draft) },
-            ) { Text("➤") }
+            ) { Icon(AppIcons.Enviar, contentDescription = "Enviar") }
         }
     }
 }
@@ -179,11 +187,21 @@ private fun ChatBubble(message: AiMessage) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Text(
-                if (isUser) "TÚ" else "🤖 ASISTENTE",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.85f),
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (!isUser) {
+                    Icon(
+                        AppIcons.Mente,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+                Text(
+                    if (isUser) "TÚ" else "ASISTENTE",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.85f),
+                )
+            }
             Text(message.content, style = MaterialTheme.typography.bodyMedium, color = Color.White)
         }
     }

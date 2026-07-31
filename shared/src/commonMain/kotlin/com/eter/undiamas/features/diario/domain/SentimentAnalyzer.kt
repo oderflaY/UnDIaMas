@@ -1,9 +1,9 @@
 package com.eter.undiamas.features.diario.domain
 
-enum class Sentiment(val label: String, val emoji: String) {
-    POSITIVO("Positiva", "🌤️"),
-    NEUTRAL("Neutral", "☁️"),
-    VULNERABLE("Vulnerable", "🌧️"),
+enum class Sentiment(val label: String) {
+    POSITIVO("Positiva"),
+    NEUTRAL("Neutral"),
+    VULNERABLE("Vulnerable"),
 }
 
 /**

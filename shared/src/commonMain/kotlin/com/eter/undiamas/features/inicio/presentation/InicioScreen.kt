@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,9 +37,10 @@ import com.eter.undiamas.core.presentation.components.StreakRing
 import com.eter.undiamas.core.presentation.components.TrafficLight
 import com.eter.undiamas.core.presentation.components.pressable
 import com.eter.undiamas.core.presentation.components.shake
-import com.eter.undiamas.core.presentation.emoji
 import com.eter.undiamas.core.presentation.formatClock
 import com.eter.undiamas.core.presentation.greetingForHour
+import com.eter.undiamas.core.presentation.greetingIconForHour
+import com.eter.undiamas.core.presentation.icon
 import com.eter.undiamas.core.presentation.label
 import com.eter.undiamas.core.presentation.motivationalQuotes
 import com.eter.undiamas.core.presentation.rememberNow
@@ -46,6 +49,7 @@ import com.eter.undiamas.core.presentation.theme.AccentAhorro
 import com.eter.undiamas.core.presentation.theme.AccentAsistente
 import com.eter.undiamas.core.presentation.theme.AccentCheckIn
 import com.eter.undiamas.core.presentation.theme.AccentDiario
+import com.eter.undiamas.core.presentation.theme.AppIcons
 import com.eter.undiamas.core.presentation.theme.EmergencyBrush
 import com.eter.undiamas.core.presentation.theme.PrimaryVioletBrush
 import com.eter.undiamas.core.presentation.theme.RiskGreen
@@ -81,7 +85,18 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(greetingForHour(localNow.hour), style = MaterialTheme.typography.bodyLarge)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        greetingIconForHour(localNow.hour),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(greetingForHour(localNow.hour), style = MaterialTheme.typography.bodyLarge)
+                }
                 Text(state.profile.displayName, style = MaterialTheme.typography.titleLarge)
             }
         }
@@ -98,7 +113,13 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
 
         item {
             GradientCard(brush = PrimaryVioletBrush, onClick = { navigator.goTo(Screen.Sobriedad) }) {
-                Text("LLEVAS SOBRIO/A", style = MaterialTheme.typography.labelMedium)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(AppIcons.Racha, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text("LLEVAS SOBRIO/A", style = MaterialTheme.typography.labelMedium)
+                }
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     StreakRing(
                         progress = progress,
@@ -118,16 +139,32 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        if (record > 0) "🏆 Tu récord: ${streakDays(record)} días" else "🏆 Aún sin récord",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            AppIcons.Record,
+                            contentDescription = null,
+                            tint = SavingsGoldEnd,
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Text(
+                            if (record > 0) "Tu récord: ${streakDays(record)} días" else "Aún sin récord",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
                     Surface(
                         shape = MaterialTheme.shapes.small,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                         modifier = Modifier.pressable({ quoteIndex = (quoteIndex + 1) % motivationalQuotes.size }),
                     ) {
-                        Text("🔄", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                        Icon(
+                            AppIcons.Refrescar,
+                            contentDescription = "Otra frase",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(10.dp).size(20.dp),
+                        )
                     }
                 }
                 Text(
@@ -149,14 +186,38 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("SEMÁFORO DE HOY", style = MaterialTheme.typography.labelMedium)
-                        Text(
-                            todayLevel?.let { "${it.emoji} ${it.label}" } ?: "Registra tu día",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                AppIcons.Semaforo,
+                                contentDescription = null,
+                                tint = todayLevel?.color ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Text("SEMÁFORO DE HOY", style = MaterialTheme.typography.labelMedium)
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            todayLevel?.let {
+                                Icon(
+                                    it.icon,
+                                    contentDescription = null,
+                                    tint = it.color,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                            Text(
+                                todayLevel?.label ?: "Registra tu día",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        }
                         Text(
                             if (todayLevel != null) {
-                                "✅ Día registrado · $cleanDays días limpios"
+                                "Día registrado · $cleanDays días limpios"
                             } else {
                                 "Toca para responder tus preguntas de hoy"
                             },
@@ -171,15 +232,39 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                ActionTile("✅", "Check-in", AccentCheckIn, { navigator.goTo(Screen.CheckIn) }, Modifier.weight(1f))
-                ActionTile("📓", "Diario", AccentDiario, { navigator.goTo(Screen.Diario) }, Modifier.weight(1f))
+                ActionTile(
+                    AppIcons.CheckIn,
+                    "Check-in",
+                    AccentCheckIn,
+                    { navigator.goTo(Screen.CheckIn) },
+                    Modifier.weight(1f),
+                )
+                ActionTile(
+                    AppIcons.Diario,
+                    "Diario",
+                    AccentDiario,
+                    { navigator.goTo(Screen.Diario) },
+                    Modifier.weight(1f),
+                )
             }
         }
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                ActionTile("💰", "Mi ahorro", AccentAhorro, { navigator.goTo(Screen.Calculadora) }, Modifier.weight(1f))
-                ActionTile("💬", "Asistente", AccentAsistente, { navigator.goTo(Screen.Ia) }, Modifier.weight(1f))
+                ActionTile(
+                    AppIcons.Ahorro,
+                    "Mi ahorro",
+                    AccentAhorro,
+                    { navigator.goTo(Screen.Calculadora) },
+                    Modifier.weight(1f),
+                )
+                ActionTile(
+                    AppIcons.Asistente,
+                    "Asistente",
+                    AccentAsistente,
+                    { navigator.goTo(Screen.Ia) },
+                    Modifier.weight(1f),
+                )
             }
         }
 
@@ -190,7 +275,13 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
                 modifier = Modifier.shake(enRiesgo),
                 onClick = { navigator.goTo(Screen.Emergencia) },
             ) {
-                Text("🆘 Necesito ayuda ahora", style = MaterialTheme.typography.titleLarge)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(AppIcons.Emergencia, contentDescription = null, modifier = Modifier.size(28.dp))
+                    Text("Necesito ayuda ahora", style = MaterialTheme.typography.titleLarge)
+                }
                 Text(
                     "Respiración guiada, ejercicio de anclaje y tu contacto de confianza.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -217,10 +308,15 @@ private fun MoodSelector(selected: Mood?, onSelect: (Mood) -> Unit) {
                 },
                 modifier = Modifier.pressable({ onSelect(mood) }),
             ) {
-                Text(
-                    mood.emoji,
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                Icon(
+                    mood.icon,
+                    contentDescription = mood.label,
+                    tint = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp).size(26.dp),
                 )
             }
         }

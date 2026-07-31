@@ -3,6 +3,8 @@ package com.eter.undiamas
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -12,7 +14,6 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.Navigator
 import com.eter.undiamas.core.presentation.Screen
+import com.eter.undiamas.core.presentation.theme.AppIcons
 import com.eter.undiamas.core.presentation.theme.UnDiaMasTheme
 import com.eter.undiamas.core.presentation.theme.screenTransition
 import com.eter.undiamas.features.calculadora.presentation.CalculadoraScreen
@@ -30,6 +32,7 @@ import com.eter.undiamas.features.checkin.presentation.CheckInScreen
 import com.eter.undiamas.features.configuracion.presentation.ConfiguracionScreen
 import com.eter.undiamas.features.diario.presentation.DiarioScreen
 import com.eter.undiamas.features.emergencia.presentation.EmergenciaScreen
+import com.eter.undiamas.features.emergencia.presentation.UrgeSurfingScreen
 import com.eter.undiamas.features.estadisticas.presentation.EstadisticasScreen
 import com.eter.undiamas.features.ia.presentation.IaScreen
 import com.eter.undiamas.features.inicio.presentation.InicioScreen
@@ -39,11 +42,11 @@ import com.eter.undiamas.features.sobriedad.presentation.SobrietyScreen
 import kotlinx.coroutines.launch
 
 private val bottomTabs = listOf(
-    Screen.Inicio to "🏠",
-    Screen.CheckIn to "✅",
-    Screen.Diario to "📓",
-    Screen.Estadisticas to "📊",
-    Screen.Perfil to "🙂",
+    Screen.Inicio to AppIcons.Inicio,
+    Screen.CheckIn to AppIcons.CheckIn,
+    Screen.Diario to AppIcons.Diario,
+    Screen.Estadisticas to AppIcons.Estadisticas,
+    Screen.Perfil to AppIcons.Perfil,
 )
 
 @Composable
@@ -71,7 +74,9 @@ fun App() {
                     TopAppBar(
                         title = { Text(navigator.current.label) },
                         navigationIcon = {
-                            TextButton(onClick = { navigator.back() }) { Text("←  Atrás") }
+                            IconButton(onClick = { navigator.back() }) {
+                                Icon(AppIcons.Atras, contentDescription = "Atrás")
+                            }
                         },
                     )
                 }
@@ -79,11 +84,11 @@ fun App() {
             bottomBar = {
                 if (isTopLevel) {
                     NavigationBar(tonalElevation = 0.dp) {
-                        bottomTabs.forEach { (screen, emoji) ->
+                        bottomTabs.forEach { (screen, icon) ->
                             NavigationBarItem(
                                 selected = navigator.current == screen,
                                 onClick = { navigator.goTo(screen) },
-                                icon = { Text(emoji, style = MaterialTheme.typography.titleMedium) },
+                                icon = { Icon(icon, contentDescription = screen.label) },
                                 label = { Text(screen.label, style = MaterialTheme.typography.labelSmall) },
                                 colors = NavigationBarItemDefaults.colors(
                                     indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
@@ -119,7 +124,8 @@ fun App() {
                         Screen.Diario -> DiarioScreen(state)
                         Screen.Estadisticas -> EstadisticasScreen(state)
                         Screen.Calculadora -> CalculadoraScreen(state)
-                        Screen.Emergencia -> EmergenciaScreen(state)
+                        Screen.Emergencia -> EmergenciaScreen(state, navigator)
+                        Screen.UrgeSurfing -> UrgeSurfingScreen(state, navigator)
                         Screen.Perfil -> PerfilScreen(state, navigator)
                         Screen.Configuracion -> ConfiguracionScreen(state)
                     }

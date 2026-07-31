@@ -7,13 +7,18 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 /** Tarjeta con fondo degradado, para los bloques destacados de cada pantalla. */
@@ -66,7 +71,7 @@ fun SectionCard(
 /** Cuadro de acceso rápido con su propio color de acento. */
 @Composable
 fun ActionTile(
-    emoji: String,
+    icon: ImageVector,
     title: String,
     accent: Color,
     onClick: () -> Unit,
@@ -80,11 +85,20 @@ fun ActionTile(
     ) {
         Column(
             modifier = Modifier.heightIn(min = 96.dp).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(emoji, style = MaterialTheme.typography.headlineSmall)
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(28.dp))
             Text(title, style = MaterialTheme.typography.titleMedium, color = accent)
         }
+    }
+}
+
+/** Encabezado de sección: icono a la izquierda y título alineado. */
+@Composable
+fun SectionHeader(icon: ImageVector, title: String, tint: Color = MaterialTheme.colorScheme.onSurface) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+        Text(title, style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -94,5 +108,14 @@ fun StatBlock(label: String, value: String, accent: Color, modifier: Modifier = 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = accent)
         OdometerText(value, style = MaterialTheme.typography.headlineSmall)
+    }
+}
+
+/** Título de pantalla con su icono, para los encabezados principales. */
+@Composable
+fun SectionHeaderLarge(icon: ImageVector, title: String, tint: Color = MaterialTheme.colorScheme.primary) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(30.dp))
+        Text(title, style = MaterialTheme.typography.headlineMedium)
     }
 }

@@ -13,6 +13,7 @@ enum class Screen(val label: String) {
     Estadisticas("Estadísticas"),
     Calculadora("Ahorro"),
     Emergencia("Emergencia"),
+    UrgeSurfing("Sostener el impulso"),
     Perfil("Perfil"),
     Configuracion("Configuración"),
 }

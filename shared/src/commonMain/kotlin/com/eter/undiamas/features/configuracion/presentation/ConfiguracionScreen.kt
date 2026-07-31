@@ -35,6 +35,14 @@ import com.eter.undiamas.core.presentation.theme.AccentDiario
 import com.eter.undiamas.core.presentation.theme.RiskGreen
 import com.eter.undiamas.core.presentation.theme.RiskRed
 import com.eter.undiamas.core.presentation.theme.RiskYellow
+import com.eter.undiamas.core.presentation.theme.AppIcons
+import com.eter.undiamas.core.presentation.components.SectionHeaderLarge
+import com.eter.undiamas.core.presentation.components.SectionHeader
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.Icon
 
 @Composable
 fun ConfiguracionScreen(state: AppState) {
@@ -46,11 +54,11 @@ fun ConfiguracionScreen(state: AppState) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("⚙️ Configuración", style = MaterialTheme.typography.headlineMedium)
+        SectionHeaderLarge(AppIcons.Configuracion, "Configuración")
 
         SectionCard {
-            Text("Notificaciones", style = MaterialTheme.typography.titleMedium)
-            SettingRow("🔔", "Recordatorios diarios", RiskGreen, settings.dailyReminders) { checked ->
+            SectionHeader(AppIcons.Notificaciones, "Notificaciones", RiskGreen)
+            SettingRow(AppIcons.Notificaciones, "Recordatorios diarios", RiskGreen, settings.dailyReminders) { checked ->
                 state.updateSettings { it.copy(dailyReminders = checked) }
             }
             if (settings.dailyReminders) {
@@ -58,24 +66,24 @@ fun ConfiguracionScreen(state: AppState) {
                     state.updateSettings { it.copy(reminderHour = hour) }
                 }
             }
-            SettingRow("📈", "Resumen semanal", AccentDiario, settings.weeklySummary) { checked ->
+            SettingRow(AppIcons.Resumen, "Resumen semanal", AccentDiario, settings.weeklySummary) { checked ->
                 state.updateSettings { it.copy(weeklySummary = checked) }
             }
         }
 
         SectionCard {
-            Text("Apariencia", style = MaterialTheme.typography.titleMedium)
-            SettingRow("🌙", "Tema oscuro", RiskYellow, settings.darkTheme) { checked ->
+            SectionHeader(AppIcons.TemaOscuro, "Apariencia", RiskYellow)
+            SettingRow(AppIcons.TemaOscuro, "Tema oscuro", RiskYellow, settings.darkTheme) { checked ->
                 state.updateSettings { it.copy(darkTheme = checked) }
             }
         }
 
         SectionCard {
-            Text("Seguridad y datos", style = MaterialTheme.typography.titleMedium)
-            SettingRow("🔒", "Bloquear el diario", AccentDiario, settings.diaryLocked) { checked ->
+            SectionHeader(AppIcons.Escudo, "Seguridad y datos", AccentDiario)
+            SettingRow(AppIcons.Bloqueado, "Bloquear el diario", AccentDiario, settings.diaryLocked) { checked ->
                 state.updateSettings { it.copy(diaryLocked = checked) }
             }
-            SettingRow("🕶️", "Modo camuflaje", RiskYellow, settings.stealthMode) { checked ->
+            SettingRow(AppIcons.Camuflaje, "Modo camuflaje", RiskYellow, settings.stealthMode) { checked ->
                 state.updateSettings { it.copy(stealthMode = checked) }
                 state.notify(
                     if (checked) {
@@ -94,6 +102,8 @@ fun ConfiguracionScreen(state: AppState) {
         }
 
         OutlinedButton(onClick = { showLogout = true }, modifier = Modifier.fillMaxWidth()) {
+            Icon(AppIcons.CerrarSesion, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
             Text("Cerrar sesión")
         }
 
@@ -102,6 +112,8 @@ fun ConfiguracionScreen(state: AppState) {
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = RiskRed),
         ) {
+            Icon(AppIcons.Borrar, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
             Text("Borrar todos mis datos")
         }
     }
@@ -150,7 +162,7 @@ fun ConfiguracionScreen(state: AppState) {
 
 @Composable
 private fun SettingRow(
-    emoji: String,
+    icon: ImageVector,
     label: String,
     accent: Color,
     checked: Boolean,
@@ -161,7 +173,10 @@ private fun SettingRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("$emoji   $label", style = MaterialTheme.typography.bodyLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
+            Text(label, style = MaterialTheme.typography.bodyLarge)
+        }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,

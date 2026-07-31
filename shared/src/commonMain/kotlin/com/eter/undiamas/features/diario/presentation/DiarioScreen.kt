@@ -47,6 +47,11 @@ import com.eter.undiamas.features.diario.domain.countWords
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
+import com.eter.undiamas.core.presentation.theme.AppIcons
+import com.eter.undiamas.core.presentation.components.SectionHeaderLarge
+import com.eter.undiamas.core.presentation.icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 
 private val entryAccents = listOf(RiskGreen, AccentDiario, AccentCheckIn, AccentPerfil, AccentAsistente)
 
@@ -70,7 +75,7 @@ fun DiarioScreen(state: AppState) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("📓 Diario", style = MaterialTheme.typography.headlineMedium)
+            SectionHeaderLarge(AppIcons.Diario, "Diario")
             Surface(
                 shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.surfaceVariant,
@@ -79,10 +84,10 @@ fun DiarioScreen(state: AppState) {
                     state.notify(if (locked) "Diario desbloqueado" else "Diario bloqueado")
                 }),
             ) {
-                Text(
-                    if (locked) "🔒" else "🔓",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                Icon(
+                    if (locked) AppIcons.Bloqueado else AppIcons.Desbloqueado,
+                    contentDescription = if (locked) "Desbloquear diario" else "Bloquear diario",
+                    modifier = Modifier.padding(12.dp).size(20.dp),
                 )
             }
         }
@@ -111,11 +116,17 @@ fun DiarioScreen(state: AppState) {
             )
             if (draft.isNotBlank()) {
                 val sentiment = state.sentimentAnalyzer.analyze(draft)
-                Text(
-                    "${sentiment.emoji} ${sentiment.label}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(sentiment.icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(
+                        sentiment.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
 
@@ -127,7 +138,7 @@ fun DiarioScreen(state: AppState) {
                 state.addDiaryEntry(
                     DiaryEntry(id = "", userId = state.profile.userId, createdAt = Clock.System.now(), text = draft),
                 )
-                state.notify("✅ Entrada guardada")
+                state.notify("Entrada guardada")
                 draft = ""
             },
         ) { Text("Guardar entrada") }
@@ -137,7 +148,8 @@ fun DiarioScreen(state: AppState) {
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("🔎 Buscar en tus entradas") },
+                placeholder = { Text("Buscar en tus entradas") },
+                leadingIcon = { Icon(AppIcons.Buscar, contentDescription = null) },
                 shape = MaterialTheme.shapes.medium,
                 singleLine = true,
             )
@@ -170,11 +182,22 @@ fun DiarioScreen(state: AppState) {
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             val local = entry.createdAt.toLocalDateTime(TimeZone.currentSystemDefault())
-                            Text(
-                                "${local.date} · ${pad(local.hour)}:${pad(local.minute)} · ${sentiment.emoji}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = accent,
-                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    sentiment.icon,
+                                    contentDescription = sentiment.label,
+                                    tint = accent,
+                                    modifier = Modifier.size(15.dp),
+                                )
+                                Text(
+                                    "${local.date} · ${pad(local.hour)}:${pad(local.minute)}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = accent,
+                                )
+                            }
                             Text(entry.text, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
@@ -199,10 +222,11 @@ private fun EmptyDiary() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            "🌱",
-            style = MaterialTheme.typography.displaySmall,
-            modifier = Modifier.graphicsLayer { rotationZ = sway },
+        Icon(
+            AppIcons.Calma,
+            contentDescription = null,
+            tint = AccentDiario,
+            modifier = Modifier.size(56.dp).graphicsLayer { rotationZ = sway },
         )
         Text("Tu diario está vacío", style = MaterialTheme.typography.titleMedium, color = AccentDiario)
         Text(
@@ -220,7 +244,7 @@ private fun LockedNotice() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("🔒", style = MaterialTheme.typography.displaySmall)
+        Icon(AppIcons.Bloqueado, contentDescription = null, modifier = Modifier.size(48.dp))
         Text("Diario bloqueado", style = MaterialTheme.typography.titleMedium)
         Text(
             "Toca el candado para volver a mostrar tus entradas.",

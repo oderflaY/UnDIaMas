@@ -2,9 +2,9 @@ package com.eter.undiamas.core.presentation
 
 /** Saludo según la hora local, para que la app se sienta acompañando el día. */
 fun greetingForHour(hour: Int): String = when (hour) {
-    in 5..11 -> "Buenos días ☀️"
-    in 12..18 -> "Buenas tardes 🌤️"
-    else -> "Buenas noches 🌙"
+    in 5..11 -> "Buenos días"
+    in 12..18 -> "Buenas tardes"
+    else -> "Buenas noches"
 }
 
 /** Frases de aliento; se rotan sin repetir la misma dos veces seguidas. */

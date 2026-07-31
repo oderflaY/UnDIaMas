@@ -43,6 +43,13 @@ import com.eter.undiamas.core.presentation.streakDays
 import com.eter.undiamas.core.presentation.theme.AccentPerfil
 import com.eter.undiamas.core.presentation.theme.PrimaryVioletBrush
 import com.eter.undiamas.core.presentation.theme.RiskGreen
+import com.eter.undiamas.core.presentation.theme.SavingsGoldEnd
+import com.eter.undiamas.core.presentation.theme.AppIcons
+import com.eter.undiamas.core.presentation.components.SectionHeader
+import com.eter.undiamas.core.presentation.icon
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.Icon
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -79,13 +86,13 @@ fun PerfilScreen(state: AppState, navigator: Navigator) {
         }
         Text(state.profile.displayName, style = MaterialTheme.typography.headlineSmall)
         Text(
-            badge?.let { "${it.emoji} ${it.title} · Nivel ${reached.size}" } ?: "🌱 Empezando el camino",
+            badge?.let { "${it.title} · Nivel ${reached.size}" } ?: "Empezando el camino",
             style = MaterialTheme.typography.labelMedium,
             color = AccentPerfil,
         )
 
         SectionCard {
-            Text("🏅 Insignias desbloqueadas", style = MaterialTheme.typography.titleMedium)
+            SectionHeader(AppIcons.Insignia, "Insignias desbloqueadas", SavingsGoldEnd)
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -97,23 +104,34 @@ fun PerfilScreen(state: AppState, navigator: Navigator) {
                         shape = RoundedCornerShape(50),
                         color = if (unlocked) RiskGreen.copy(alpha = 0.26f) else MaterialTheme.colorScheme.surface,
                     ) {
-                        Text(
-                            if (unlocked) "${milestone.emoji} ${milestone.title}" else "🔒 ${milestone.title}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (unlocked) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
+                        Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        )
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                if (unlocked) AppIcons.Insignia else AppIcons.Bloqueado,
+                                contentDescription = null,
+                                tint = if (unlocked) RiskGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Text(
+                                milestone.title,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (unlocked) {
+                                    MaterialTheme.colorScheme.onSurface
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        }
                     }
                 }
             }
         }
 
         SectionCard {
-            Text("💛 Mi por qué", style = MaterialTheme.typography.titleMedium)
+            SectionHeader(AppIcons.PorQue, "Mi por qué", AccentPerfil)
             Text(
                 "Escribe aquí lo que quieres recordar cuando la cosa se ponga difícil.",
                 style = MaterialTheme.typography.labelMedium,
@@ -172,13 +190,13 @@ fun PerfilScreen(state: AppState, navigator: Navigator) {
                             },
                         )
                     }
-                    state.notify("Perfil actualizado ✨")
+                    state.notify("Perfil actualizado")
                 },
             ) { Text("Guardar cambios") }
         }
 
         SectionCard {
-            Text("🤝 Red de soporte", style = MaterialTheme.typography.titleMedium)
+            SectionHeader(AppIcons.Red, "Red de soporte", AccentPerfil)
             if (state.profile.supportNetwork.isEmpty()) {
                 Text(
                     "Agrega a más personas de confianza: padrino, terapeuta o familiares.",
@@ -191,7 +209,10 @@ fun PerfilScreen(state: AppState, navigator: Navigator) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("${contact.role.emoji} ${contact.name}", style = MaterialTheme.typography.bodyMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(contact.role.icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(contact.name, style = MaterialTheme.typography.bodyMedium)
+                    }
                     Text(contact.phone, style = MaterialTheme.typography.labelMedium)
                 }
             }
@@ -230,7 +251,9 @@ fun PerfilScreen(state: AppState, navigator: Navigator) {
         }
 
         OutlinedButton(onClick = { navigator.goTo(Screen.Configuracion) }, modifier = Modifier.fillMaxWidth()) {
-            Text("⚙️  Configuración")
+            Icon(AppIcons.Configuracion, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Text("Configuración")
         }
     }
 }
@@ -254,11 +277,14 @@ private fun RolePicker(selected: SupportRole, onSelect: (SupportRole) -> Unit) {
                 },
                 modifier = Modifier.pressable({ onSelect(role) }),
             ) {
-                Text(
-                    "${role.emoji} ${role.label}",
-                    style = MaterialTheme.typography.labelMedium,
+                Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                )
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(role.icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(role.label, style = MaterialTheme.typography.labelMedium)
+                }
             }
         }
     }

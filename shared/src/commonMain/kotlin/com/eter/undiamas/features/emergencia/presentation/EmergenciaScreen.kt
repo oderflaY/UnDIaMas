@@ -32,6 +32,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
+import com.eter.undiamas.core.presentation.Navigator
+import com.eter.undiamas.core.presentation.Screen
 import com.eter.undiamas.core.presentation.components.BreathingCircle
 import com.eter.undiamas.core.presentation.components.BubblePopGame
 import com.eter.undiamas.core.presentation.components.SectionCard
@@ -42,19 +44,28 @@ import com.eter.undiamas.core.presentation.theme.EmergencyCoralEnd
 import com.eter.undiamas.core.presentation.theme.EmergencyCoralStart
 import com.eter.undiamas.core.presentation.theme.PrimaryVioletStart
 import com.eter.undiamas.core.presentation.theme.RiskGreen
+import com.eter.undiamas.core.presentation.theme.AppIcons
+import com.eter.undiamas.core.presentation.components.SectionHeader
+import com.eter.undiamas.core.presentation.icon
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.Icon
+
+private data class GroundingStep(val icon: ImageVector, val text: String)
 
 private val groundingSteps = listOf(
-    "👀 Nombra 5 cosas que puedas ver",
-    "✋ Nombra 4 cosas que puedas tocar",
-    "👂 Nombra 3 cosas que puedas oír",
-    "👃 Nombra 2 cosas que puedas oler",
-    "👅 Nombra 1 cosa que puedas saborear",
+    GroundingStep(AppIcons.Ver, "Nombra 5 cosas que puedas ver"),
+    GroundingStep(AppIcons.Tocar, "Nombra 4 cosas que puedas tocar"),
+    GroundingStep(AppIcons.Oir, "Nombra 3 cosas que puedas oír"),
+    GroundingStep(AppIcons.Oler, "Nombra 2 cosas que puedas oler"),
+    GroundingStep(AppIcons.Saborear, "Nombra 1 cosa que puedas saborear"),
 )
 
 private enum class Tool { RESPIRACION, ANCLAJE, BURBUJAS }
 
 @Composable
-fun EmergenciaScreen(state: AppState) {
+fun EmergenciaScreen(state: AppState, navigator: Navigator) {
     val contact = state.profile.trustedContact
     val dial = rememberPhoneDialer()
     var tool by remember { mutableStateOf(Tool.RESPIRACION) }
@@ -80,10 +91,24 @@ fun EmergenciaScreen(state: AppState) {
         Text("Estás a salvo", style = MaterialTheme.typography.headlineMedium)
         Text("Esto también pasará.", style = MaterialTheme.typography.bodyLarge)
 
+        // Acceso al búnker de 15 minutos: la herramienta más fuerte cuando el impulso es agudo.
+        Button(
+            onClick = { navigator.goTo(Screen.UrgeSurfing) },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = EmergencyCoralStart,
+                contentColor = Color.White,
+            ),
+            modifier = Modifier.fillMaxWidth().height(64.dp),
+        ) {
+            Icon(AppIcons.Escudo, contentDescription = null, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(10.dp))
+            Text("Sostener el impulso · 15 min", style = MaterialTheme.typography.titleMedium)
+        }
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            ToolChip("🫁 Respirar", tool == Tool.RESPIRACION, Modifier.weight(1f)) { tool = Tool.RESPIRACION }
-            ToolChip("🧭 Anclaje", tool == Tool.ANCLAJE, Modifier.weight(1f)) { tool = Tool.ANCLAJE }
-            ToolChip("🫧 Burbujas", tool == Tool.BURBUJAS, Modifier.weight(1f)) { tool = Tool.BURBUJAS }
+            ToolChip(AppIcons.Respiracion, "Respirar", tool == Tool.RESPIRACION, Modifier.weight(1f)) { tool = Tool.RESPIRACION }
+            ToolChip(AppIcons.Calma, "Anclaje", tool == Tool.ANCLAJE, Modifier.weight(1f)) { tool = Tool.ANCLAJE }
+            ToolChip(AppIcons.Distraccion, "Burbujas", tool == Tool.BURBUJAS, Modifier.weight(1f)) { tool = Tool.BURBUJAS }
         }
 
         when (tool) {
@@ -99,13 +124,21 @@ fun EmergenciaScreen(state: AppState) {
 
             Tool.ANCLAJE -> {
                 SectionCard {
-                    Text("Técnica 5-4-3-2-1", style = MaterialTheme.typography.titleMedium)
+                    SectionHeader(AppIcons.Calma, "Técnica 5-4-3-2-1", EmergencyCoralStart)
                     Text(
                         "Aterriza tus sentidos, uno a la vez. No hay prisa.",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Text(groundingSteps[groundingStep], style = MaterialTheme.typography.headlineSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            groundingSteps[groundingStep].icon,
+                            contentDescription = null,
+                            tint = EmergencyCoralStart,
+                            modifier = Modifier.size(32.dp),
+                        )
+                        Text(groundingSteps[groundingStep].text, style = MaterialTheme.typography.titleLarge)
+                    }
                     LinearProgressIndicator(
                         progress = { (groundingStep + 1f) / groundingSteps.size },
                         modifier = Modifier.fillMaxWidth().height(8.dp),
@@ -136,7 +169,7 @@ fun EmergenciaScreen(state: AppState) {
 
             Tool.BURBUJAS -> {
                 SectionCard {
-                    Text("Revienta las burbujas", style = MaterialTheme.typography.titleMedium)
+                    SectionHeader(AppIcons.Distraccion, "Revienta las burbujas", EmergencyCoralStart)
                     Text(
                         "Un minuto de foco en otra cosa basta para que el impulso baje.",
                         style = MaterialTheme.typography.labelMedium,
@@ -175,7 +208,13 @@ fun EmergenciaScreen(state: AppState) {
                             style = MaterialTheme.typography.labelMedium,
                             color = EmergencyCoralStart,
                         )
-                        Text("${contact.role.emoji} ${contact.name}", style = MaterialTheme.typography.titleMedium)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(contact.role.icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text(contact.name, style = MaterialTheme.typography.titleMedium)
+                        }
                         Text(contact.phone, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
@@ -188,7 +227,9 @@ fun EmergenciaScreen(state: AppState) {
                 ),
                 modifier = Modifier.fillMaxWidth().height(60.dp),
             ) {
-                Text("📞  Llamar a ${contact.name}", style = MaterialTheme.typography.titleMedium)
+                Icon(AppIcons.Llamar, contentDescription = null, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(10.dp))
+                Text("Llamar a ${contact.name}", style = MaterialTheme.typography.titleMedium)
             }
             Text(
                 "Se abrirá tu app de teléfono con el número listo; tú decides cuándo marcar.",
@@ -198,7 +239,9 @@ fun EmergenciaScreen(state: AppState) {
 
             state.profile.supportNetwork.forEach { extra ->
                 OutlinedButton(onClick = { dial(extra.phone) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("${extra.role.emoji}  Llamar a ${extra.name}")
+                    Icon(extra.role.icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Llamar a ${extra.name}")
                 }
             }
         } else {
@@ -223,16 +266,25 @@ fun EmergenciaScreen(state: AppState) {
 }
 
 @Composable
-private fun ToolChip(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun ToolChip(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     Surface(
         shape = RoundedCornerShape(50),
         color = if (selected) EmergencyCoralStart.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant,
         modifier = modifier.pressable(onClick),
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
+        Column(
             modifier = Modifier.padding(vertical = 12.dp),
-        )
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium)
+        }
     }
 }

@@ -28,10 +28,3 @@ val RiskLevel.label: String
         RiskLevel.AMARILLO -> "Hay un detonante"
         RiskLevel.ROJO -> "Protocolo de emergencia"
     }
-
-val RiskLevel.emoji: String
-    get() = when (this) {
-        RiskLevel.VERDE -> "🌱"
-        RiskLevel.AMARILLO -> "⚠️"
-        RiskLevel.ROJO -> "🆘"
-    }

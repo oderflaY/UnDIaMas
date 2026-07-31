@@ -5,13 +5,13 @@ import kotlinx.serialization.Serializable
 
 /** Detonantes que la persona puede marcar cuando reconoce que algo la activó. */
 @Serializable
-enum class Trigger(val label: String, val emoji: String) {
-    ESTRES("Estrés", "😰"),
-    SOLEDAD("Soledad", "🌑"),
-    CANSANCIO("Cansancio", "😴"),
-    ABURRIMIENTO("Aburrimiento", "🥱"),
-    SOCIAL("Social", "🎉"),
-    TRABAJO("Trabajo", "💼"),
+enum class Trigger(val label: String) {
+    ESTRES("Estrés"),
+    SOLEDAD("Soledad"),
+    CANSANCIO("Cansancio"),
+    ABURRIMIENTO("Aburrimiento"),
+    SOCIAL("Social"),
+    TRABAJO("Trabajo"),
 }
 
 @Serializable
@@ -35,12 +35,12 @@ data class RiskAssessment(
 
 /** Registro rápido de ánimo, sin pasar por el check-in completo. */
 @Serializable
-enum class Mood(val label: String, val emoji: String) {
-    MUY_MAL("Muy mal", "😞"),
-    MAL("Mal", "🙁"),
-    NEUTRAL("Neutral", "😐"),
-    BIEN("Bien", "🙂"),
-    MUY_BIEN("Muy bien", "😄"),
+enum class Mood(val label: String) {
+    MUY_MAL("Muy mal"),
+    MAL("Mal"),
+    NEUTRAL("Neutral"),
+    BIEN("Bien"),
+    MUY_BIEN("Muy bien"),
 }
 
 @Serializable

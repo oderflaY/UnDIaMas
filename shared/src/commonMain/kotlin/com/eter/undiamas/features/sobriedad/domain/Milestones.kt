@@ -1,7 +1,7 @@
 package com.eter.undiamas.features.sobriedad.domain
 
 /** Placa de sobriedad que la persona va desbloqueando conforme sostiene la racha. */
-data class Milestone(val days: Int, val title: String, val emoji: String)
+data class Milestone(val days: Int, val title: String)
 
 /**
  * Mapa de hitos: sirve tanto para la galería de insignias del perfil como para
@@ -9,14 +9,14 @@ data class Milestone(val days: Int, val title: String, val emoji: String)
  */
 class Milestones {
     val all: List<Milestone> = listOf(
-        Milestone(1, "Primer día", "🌱"),
-        Milestone(7, "Una semana", "🌿"),
-        Milestone(14, "Dos semanas", "🍀"),
-        Milestone(30, "Un mes", "🌳"),
-        Milestone(60, "Dos meses", "⭐"),
-        Milestone(90, "Tres meses", "🔥"),
-        Milestone(180, "Medio año", "💎"),
-        Milestone(365, "Un año", "👑"),
+        Milestone(1, "Primer día"),
+        Milestone(7, "Una semana"),
+        Milestone(14, "Dos semanas"),
+        Milestone(30, "Un mes"),
+        Milestone(60, "Dos meses"),
+        Milestone(90, "Tres meses"),
+        Milestone(180, "Medio año"),
+        Milestone(365, "Un año"),
     )
 
     /** Hitos ya conseguidos con [currentDays] días de racha. */

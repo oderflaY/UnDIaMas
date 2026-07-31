@@ -46,6 +46,11 @@ import com.eter.undiamas.core.presentation.theme.PrimaryVioletBrush
 import com.eter.undiamas.core.presentation.theme.RiskGreen
 import com.eter.undiamas.core.presentation.theme.SavingsGoldEnd
 import kotlin.time.Clock
+import com.eter.undiamas.core.presentation.theme.AppIcons
+import com.eter.undiamas.core.presentation.components.SectionHeader
+import com.eter.undiamas.core.presentation.icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -87,20 +92,20 @@ fun SobrietyScreen(state: AppState) {
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             SectionCard(modifier = Modifier.weight(1f)) {
-                Text("🏆 RÉCORD", style = MaterialTheme.typography.labelMedium)
+                SectionHeader(AppIcons.Record, "Récord", SavingsGoldEnd)
                 Text("${streakDays(record)} días", style = MaterialTheme.typography.titleLarge)
             }
             SectionCard(modifier = Modifier.weight(1f)) {
-                Text("📅 DÍAS TOTALES", style = MaterialTheme.typography.labelMedium)
+                SectionHeader(AppIcons.Calendario, "Días totales", RiskGreen)
                 Text("$days", style = MaterialTheme.typography.titleLarge)
             }
         }
 
         SectionCard {
-            Text("Próximo hito", style = MaterialTheme.typography.titleMedium)
+            SectionHeader(AppIcons.Insignia, "Próximo hito", SavingsGoldEnd)
             if (nextMilestone != null && daysToNext != null) {
                 Text(
-                    "${nextMilestone.emoji} Te faltan $daysToNext días para tu placa de ${nextMilestone.title}",
+                    "Te faltan $daysToNext días para tu placa de ${nextMilestone.title}",
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 LinearProgressIndicator(
@@ -108,7 +113,7 @@ fun SobrietyScreen(state: AppState) {
                     modifier = Modifier.fillMaxWidth().height(8.dp),
                 )
             } else {
-                Text("👑 Alcanzaste todos los hitos registrados.", style = MaterialTheme.typography.bodyMedium)
+                Text("Alcanzaste todos los hitos registrados.", style = MaterialTheme.typography.bodyMedium)
             }
 
             FlowRow(
@@ -122,16 +127,27 @@ fun SobrietyScreen(state: AppState) {
                         shape = RoundedCornerShape(50),
                         color = if (reached) RiskGreen.copy(alpha = 0.28f) else MaterialTheme.colorScheme.surface,
                     ) {
-                        Text(
-                            "${milestone.emoji} ${milestone.days}d",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (reached) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
+                        Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        )
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                if (reached) AppIcons.Insignia else AppIcons.Bloqueado,
+                                contentDescription = null,
+                                tint = if (reached) RiskGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Text(
+                                "${milestone.days}d",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (reached) {
+                                    MaterialTheme.colorScheme.onSurface
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -199,11 +215,14 @@ fun SobrietyScreen(state: AppState) {
                                     }
                                 }),
                             ) {
-                                Text(
-                                    "${trigger.emoji} ${trigger.label}",
-                                    style = MaterialTheme.typography.labelMedium,
+                                Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                )
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(trigger.icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Text(trigger.label, style = MaterialTheme.typography.labelMedium)
+                                }
                             }
                         }
                     }

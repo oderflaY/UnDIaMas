@@ -36,6 +36,13 @@ import com.eter.undiamas.core.presentation.rememberNow
 import com.eter.undiamas.core.presentation.theme.AccentAhorro
 import com.eter.undiamas.core.presentation.theme.SavingsBrush
 import kotlin.math.roundToInt
+import com.eter.undiamas.core.presentation.theme.AppIcons
+import com.eter.undiamas.core.presentation.components.SectionHeaderLarge
+import com.eter.undiamas.core.presentation.components.SectionHeader
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 
 private const val PRECIO_CAFE = 45.0
 private const val PRECIO_LIBRO = 250.0
@@ -76,7 +83,7 @@ fun CalculadoraScreen(state: AppState) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("💰 Tu ahorro", style = MaterialTheme.typography.headlineMedium)
+        SectionHeaderLarge(AppIcons.Ahorro, "Tu ahorro")
 
         GradientCard(brush = SavingsBrush) {
             Text("AHORRO TOTAL", style = MaterialTheme.typography.labelMedium)
@@ -100,7 +107,7 @@ fun CalculadoraScreen(state: AppState) {
         )
 
         SectionCard {
-            Text("Proyección", style = MaterialTheme.typography.titleMedium)
+            SectionHeader(AppIcons.Tendencia, "Proyección", AccentAhorro)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 Period.entries.forEach { option ->
                     val selected = option == period
@@ -128,15 +135,15 @@ fun CalculadoraScreen(state: AppState) {
         }
 
         SectionCard {
-            Text("Eso ya equivale a…", style = MaterialTheme.typography.titleMedium)
-            Equivalence("☕", "cafés", (total / PRECIO_CAFE).roundToInt())
-            Equivalence("📚", "libros", (total / PRECIO_LIBRO).roundToInt())
-            Equivalence("🎟️", "conciertos", (total / PRECIO_CONCIERTO).roundToInt())
-            Equivalence("✈️", "viajes", (total / PRECIO_VIAJE).roundToInt())
+            SectionHeader(AppIcons.Cartera, "Eso ya equivale a…", AccentAhorro)
+            Equivalence(AppIcons.Cafe, "cafés", (total / PRECIO_CAFE).roundToInt())
+            Equivalence(AppIcons.Libro, "libros", (total / PRECIO_LIBRO).roundToInt())
+            Equivalence(AppIcons.Concierto, "conciertos", (total / PRECIO_CONCIERTO).roundToInt())
+            Equivalence(AppIcons.Viaje, "viajes", (total / PRECIO_VIAJE).roundToInt())
         }
 
         SectionCard {
-            Text("🎁 Mi meta", style = MaterialTheme.typography.titleMedium)
+            SectionHeader(AppIcons.Meta, "Mi meta", AccentAhorro)
             if (goal != null && goalProgress != null) {
                 Text(
                     "${goal.title} · $${total.roundToInt()} de $${goal.targetAmount.roundToInt()}",
@@ -179,13 +186,13 @@ fun CalculadoraScreen(state: AppState) {
                             savingsGoal = SavingsGoal(goalTitle, goalAmount.toDouble()),
                         )
                     }
-                    state.notify("Meta guardada 🎯")
+                    state.notify("Meta guardada")
                 },
             ) { Text("Guardar meta") }
         }
 
         SectionCard {
-            Text("📈 Si lo invirtieras", style = MaterialTheme.typography.titleMedium)
+            SectionHeader(AppIcons.Tendencia, "Si lo invirtieras", AccentAhorro)
             Text(
                 "$${compound.roundToInt()}",
                 style = MaterialTheme.typography.headlineMedium,
@@ -202,9 +209,12 @@ fun CalculadoraScreen(state: AppState) {
 }
 
 @Composable
-private fun Equivalence(emoji: String, unit: String, count: Int) {
+private fun Equivalence(icon: ImageVector, unit: String, count: Int) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text("$emoji  $unit", style = MaterialTheme.typography.bodyMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = AccentAhorro, modifier = Modifier.size(20.dp))
+            Text(unit, style = MaterialTheme.typography.bodyMedium)
+        }
         Text("≈ $count", style = MaterialTheme.typography.titleMedium, color = AccentAhorro)
     }
 }

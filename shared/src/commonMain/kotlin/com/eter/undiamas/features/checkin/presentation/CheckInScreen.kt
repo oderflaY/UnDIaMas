@@ -44,7 +44,6 @@ import com.eter.undiamas.core.presentation.components.Confetti
 import com.eter.undiamas.core.presentation.components.GradientCard
 import com.eter.undiamas.core.presentation.components.TrafficLight
 import com.eter.undiamas.core.presentation.components.pressable
-import com.eter.undiamas.core.presentation.emoji
 import com.eter.undiamas.core.presentation.label
 import com.eter.undiamas.core.presentation.theme.AccentCheckIn
 import com.eter.undiamas.core.presentation.theme.AnswerBlue
@@ -52,6 +51,13 @@ import com.eter.undiamas.core.presentation.theme.CheckInProgressBrush
 import com.eter.undiamas.core.presentation.theme.resultEnterTransition
 import kotlin.math.roundToInt
 import kotlin.time.Clock
+import com.eter.undiamas.core.presentation.theme.AppIcons
+import com.eter.undiamas.core.presentation.icon
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.Icon
 
 private data class Question(val key: String, val text: String, val kind: String)
 
@@ -105,12 +111,12 @@ fun CheckInScreen(state: AppState, navigator: Navigator) {
                 Text(question.text, style = MaterialTheme.typography.headlineSmall)
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    AnswerTile("⚠️", "Sí", MaterialTheme.colorScheme.error, Modifier.weight(1f)) {
+                    AnswerTile(AppIcons.Alerta, "Sí", MaterialTheme.colorScheme.error, Modifier.weight(1f)) {
                         answers[question.key] = "si"
                         showTriggers = true
                         if (stepIndex < questions.lastIndex) stepIndex += 1
                     }
-                    AnswerTile("✨", "No", AnswerBlue, Modifier.weight(1f)) {
+                    AnswerTile(AppIcons.CheckIn, "No", AnswerBlue, Modifier.weight(1f)) {
                         answers[question.key] = "no"
                         if (stepIndex < questions.lastIndex) {
                             stepIndex += 1
@@ -146,13 +152,13 @@ fun CheckInScreen(state: AppState, navigator: Navigator) {
                     GradientCard(brush = assessment.riskLevel.brush) {
                         Text("RESULTADO DE TU CHECK-IN", style = MaterialTheme.typography.labelMedium)
                         Text(
-                            "${assessment.riskLevel.emoji}  ${assessment.riskLevel.label}",
+                            assessment.riskLevel.label,
                             style = MaterialTheme.typography.headlineSmall,
                         )
                         Text(assessment.recommendation, style = MaterialTheme.typography.bodyLarge)
                         if (selectedTriggers.isNotEmpty()) {
                             Text(
-                                "Detonantes: ${selectedTriggers.joinToString { "${it.emoji} ${it.label}" }}",
+                                "Detonantes: ${selectedTriggers.joinToString { it.label }}",
                                 style = MaterialTheme.typography.labelMedium,
                             )
                         }
@@ -171,7 +177,9 @@ fun CheckInScreen(state: AppState, navigator: Navigator) {
                         modifier = Modifier.fillMaxWidth().height(64.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     ) {
-                        Text("🆘 Ir al protocolo de emergencia", style = MaterialTheme.typography.titleMedium)
+                        Icon(AppIcons.Emergencia, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("Ir al protocolo de emergencia", style = MaterialTheme.typography.titleMedium)
                     }
                 } else {
                     Button(onClick = { navigator.goTo(Screen.Inicio) }, modifier = Modifier.fillMaxWidth()) {
@@ -232,7 +240,7 @@ private fun accentTrack() = androidx.compose.ui.graphics.SolidColor(AccentCheckI
 
 @Composable
 private fun AnswerTile(
-    emoji: String,
+    icon: ImageVector,
     label: String,
     accent: Color,
     modifier: Modifier = Modifier,
@@ -249,7 +257,7 @@ private fun AnswerTile(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(emoji, style = MaterialTheme.typography.headlineSmall)
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(30.dp))
             Text(label, style = MaterialTheme.typography.headlineSmall)
         }
     }
@@ -269,11 +277,14 @@ private fun TriggerCloud(selected: Set<Trigger>, onToggle: (Trigger) -> Unit) {
                 color = if (isSelected) AccentCheckIn.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier.pressable({ onToggle(trigger) }),
             ) {
-                Text(
-                    "${trigger.emoji} ${trigger.label}",
-                    style = MaterialTheme.typography.bodyMedium,
+                Row(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                )
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(trigger.icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(trigger.label, style = MaterialTheme.typography.bodyMedium)
+                }
             }
         }
     }

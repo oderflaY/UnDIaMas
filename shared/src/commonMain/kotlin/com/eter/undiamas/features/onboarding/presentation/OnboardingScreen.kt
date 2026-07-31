@@ -34,6 +34,10 @@ import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.components.GradientCard
 import com.eter.undiamas.core.presentation.theme.PrimaryVioletBrush
 import com.eter.undiamas.core.presentation.theme.PrimaryVioletStart
+import com.eter.undiamas.core.presentation.theme.AppIcons
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 
 private const val TOTAL_STEPS = 5
 
@@ -91,7 +95,7 @@ fun OnboardingScreen(state: AppState) {
         ) { current ->
             when (current) {
                 0 -> QuestionStep(
-                    emoji = "👋",
+                    icon = AppIcons.Perfil,
                     question = "¿Cómo quieres que te llamemos?",
                     hint = "Puede ser tu nombre o un apodo.",
                 ) {
@@ -106,7 +110,7 @@ fun OnboardingScreen(state: AppState) {
                 }
 
                 1 -> QuestionStep(
-                    emoji = "🌱",
+                    icon = AppIcons.Racha,
                     question = "¿Cuántos días llevas sobrio/a?",
                     hint = "Si empiezas hoy, deja 0. El contador arranca desde ahí.",
                 ) {
@@ -114,7 +118,7 @@ fun OnboardingScreen(state: AppState) {
                 }
 
                 2 -> QuestionStep(
-                    emoji = "🏆",
+                    icon = AppIcons.Record,
                     question = "¿Cuál es tu récord anterior?",
                     hint = "Tu mejor racha hasta hoy, en días. Si es la primera vez, deja 0.",
                 ) {
@@ -122,7 +126,7 @@ fun OnboardingScreen(state: AppState) {
                 }
 
                 3 -> QuestionStep(
-                    emoji = "💰",
+                    icon = AppIcons.Ahorro,
                     question = "¿Cuánto gastabas al día?",
                     hint = "Nos sirve para calcular cuánto llevas ahorrado.",
                 ) {
@@ -130,7 +134,7 @@ fun OnboardingScreen(state: AppState) {
                 }
 
                 else -> QuestionStep(
-                    emoji = "🤝",
+                    icon = AppIcons.Red,
                     question = "¿A quién llamamos si estás en riesgo?",
                     hint = "Tu contacto de confianza aparecerá en el protocolo de emergencia. Puedes dejarlo en blanco y agregarlo después.",
                 ) {
@@ -175,7 +179,7 @@ fun OnboardingScreen(state: AppState) {
                 }
             },
         ) {
-            Text(if (step < TOTAL_STEPS - 1) "Continuar" else "Comenzar 🎉")
+            Text(if (step < TOTAL_STEPS - 1) "Continuar" else "Comenzar")
         }
 
         if (step > 0) {
@@ -188,13 +192,18 @@ fun OnboardingScreen(state: AppState) {
 
 @Composable
 private fun QuestionStep(
-    emoji: String,
+    icon: ImageVector,
     question: String,
     hint: String,
     field: @Composable () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(emoji, style = MaterialTheme.typography.displaySmall)
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = PrimaryVioletStart,
+            modifier = Modifier.size(44.dp),
+        )
         Text(question, style = MaterialTheme.typography.headlineSmall)
         Text(
             hint,

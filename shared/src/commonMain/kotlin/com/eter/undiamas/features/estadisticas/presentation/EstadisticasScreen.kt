@@ -30,7 +30,6 @@ import com.eter.undiamas.core.presentation.color
 import com.eter.undiamas.core.presentation.components.CleanDaysCalendar
 import com.eter.undiamas.core.presentation.components.GradientCard
 import com.eter.undiamas.core.presentation.components.SectionCard
-import com.eter.undiamas.core.presentation.emoji
 import com.eter.undiamas.core.presentation.label
 import com.eter.undiamas.core.presentation.rememberNow
 import com.eter.undiamas.core.presentation.streakDays
@@ -43,6 +42,14 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.math.roundToInt
+import com.eter.undiamas.core.presentation.theme.AppIcons
+import com.eter.undiamas.core.presentation.components.SectionHeaderLarge
+import com.eter.undiamas.core.presentation.components.SectionHeader
+import com.eter.undiamas.core.presentation.icon
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 
 @Composable
 fun EstadisticasScreen(state: AppState) {
@@ -67,7 +74,7 @@ fun EstadisticasScreen(state: AppState) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("📊 Estadísticas", style = MaterialTheme.typography.headlineMedium)
+        SectionHeaderLarge(AppIcons.Estadisticas, "Estadísticas")
 
         GradientCard(brush = StatsBrush) {
             Row(
@@ -81,7 +88,7 @@ fun EstadisticasScreen(state: AppState) {
         }
 
         SectionCard {
-            Text("Tus últimas 4 semanas", style = MaterialTheme.typography.titleMedium)
+            SectionHeader(AppIcons.Calendario, "Tus últimas 4 semanas")
             CleanDaysCalendar(days = calendarDays, levelByDay = levelByDay, today = today)
             Text(
                 "Cada casilla es un día. Se colorea con el semáforo de tu check-in; " +
@@ -92,11 +99,11 @@ fun EstadisticasScreen(state: AppState) {
         }
 
         SectionCard {
-            Text("Distribución del semáforo", style = MaterialTheme.typography.titleMedium)
+            SectionHeader(AppIcons.Semaforo, "Distribución del semáforo")
             byLevel.forEach { (level, count) ->
                 val percent = if (total == 0) 0 else (count * 100f / total).roundToInt()
                 RiskBar(
-                    emoji = level.emoji,
+                    icon = level.icon,
                     label = level.label,
                     percent = percent,
                     fraction = if (total == 0) 0f else count.toFloat() / total,
@@ -106,7 +113,7 @@ fun EstadisticasScreen(state: AppState) {
         }
 
         SectionCard {
-            Text("Horas críticas", style = MaterialTheme.typography.titleMedium)
+            SectionHeader(AppIcons.Hora, "Horas críticas")
             Text(
                 riskiestHour?.let { "Tu horario con mayor riesgo suele ser alrededor de las ${pad(it)}:00." }
                     ?: "Aún no hay suficientes check-ins en riesgo para detectar un patrón.",
@@ -117,12 +124,12 @@ fun EstadisticasScreen(state: AppState) {
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            MiniStat("💪", "Impulsos superados", "$urgesOvercome", RiskRed, Modifier.weight(1f))
-            MiniStat("📅", "Días con registro", "$registeredDays", AccentDiario, Modifier.weight(1f))
+            MiniStat(AppIcons.Escudo, "Impulsos superados", "$urgesOvercome", RiskRed, Modifier.weight(1f))
+            MiniStat(AppIcons.Calendario, "Días con registro", "$registeredDays", AccentDiario, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            MiniStat("📓", "Entradas", "${state.diaryEntries.size}", AccentDiario, Modifier.weight(1f))
-            MiniStat("💬", "Apoyos IA", "${state.aiMessages.size}", AccentAsistente, Modifier.weight(1f))
+            MiniStat(AppIcons.Diario, "Entradas", "${state.diaryEntries.size}", AccentDiario, Modifier.weight(1f))
+            MiniStat(AppIcons.Asistente, "Apoyos IA", "${state.aiMessages.size}", AccentAsistente, Modifier.weight(1f))
         }
     }
 }
@@ -142,12 +149,15 @@ private fun HeroMetric(label: String, value: String, modifier: Modifier = Modifi
 }
 
 @Composable
-private fun RiskBar(emoji: String, label: String, percent: Int, fraction: Float, accent: Color) {
+private fun RiskBar(icon: ImageVector, label: String, percent: Int, fraction: Float, accent: Color) {
     val animated by animateFloatAsState(targetValue = fraction, animationSpec = tween(700), label = "risk-bar")
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("$emoji  $label", style = MaterialTheme.typography.bodyMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
+                Text(label, style = MaterialTheme.typography.bodyMedium)
+            }
             Text("$percent%", style = MaterialTheme.typography.labelMedium, color = accent)
         }
         Box(
@@ -195,9 +205,9 @@ private fun HourHeatmap(byHour: List<Int>, riskiest: Int?) {
 }
 
 @Composable
-private fun MiniStat(emoji: String, label: String, value: String, accent: Color, modifier: Modifier = Modifier) {
+private fun MiniStat(icon: ImageVector, label: String, value: String, accent: Color, modifier: Modifier = Modifier) {
     SectionCard(modifier = modifier, containerColor = accent.copy(alpha = 0.13f)) {
-        Text(emoji, style = MaterialTheme.typography.titleLarge)
+        Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(24.dp))
         Text(label.uppercase(), style = MaterialTheme.typography.labelMedium, color = accent)
         Text(value, style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Monospace)
     }
