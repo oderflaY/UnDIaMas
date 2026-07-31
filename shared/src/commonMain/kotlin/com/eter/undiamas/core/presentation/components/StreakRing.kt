@@ -46,6 +46,7 @@ fun StreakRing(
     modifier: Modifier = Modifier,
     size: Int = 200,
     contentColor: Color = Color.White,
+    companion: (@Composable () -> Unit)? = null,
 ) {
     val animatedProgress by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
@@ -120,6 +121,7 @@ fun StreakRing(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
+            companion?.invoke()
             OdometerText(
                 value = days,
                 style = MaterialTheme.typography.displaySmall,

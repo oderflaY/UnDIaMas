@@ -173,13 +173,13 @@ fun CheckInScreen(state: AppState, navigator: Navigator) {
 
                 if (assessment.riskLevel == RiskLevel.ROJO) {
                     Button(
-                        onClick = { navigator.goTo(Screen.Emergencia) },
+                        onClick = { navigator.goTo(Screen.UrgeSurfing) },
                         modifier = Modifier.fillMaxWidth().height(64.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     ) {
                         Icon(AppIcons.Emergencia, contentDescription = null, modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(10.dp))
-                        Text("Ir al protocolo de emergencia", style = MaterialTheme.typography.titleMedium)
+                        Text("Sostener el impulso · 15 min", style = MaterialTheme.typography.titleMedium)
                     }
                 } else {
                     Button(onClick = { navigator.goTo(Screen.Inicio) }, modifier = Modifier.fillMaxWidth()) {

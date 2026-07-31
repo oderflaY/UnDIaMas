@@ -1,5 +1,6 @@
 package com.eter.undiamas.features.configuracion.presentation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -79,26 +80,10 @@ fun ConfiguracionScreen(state: AppState) {
         }
 
         SectionCard {
-            SectionHeader(AppIcons.Escudo, "Seguridad y datos", AccentDiario)
+            SectionHeader(AppIcons.Bloqueado, "Privacidad del diario", AccentDiario)
             SettingRow(AppIcons.Bloqueado, "Bloquear el diario", AccentDiario, settings.diaryLocked) { checked ->
                 state.updateSettings { it.copy(diaryLocked = checked) }
             }
-            SettingRow(AppIcons.Camuflaje, "Modo camuflaje", RiskYellow, settings.stealthMode) { checked ->
-                state.updateSettings { it.copy(stealthMode = checked) }
-                state.notify(
-                    if (checked) {
-                        "Modo camuflaje activado dentro de la app"
-                    } else {
-                        "Modo camuflaje desactivado"
-                    },
-                )
-            }
-            Text(
-                "El modo camuflaje oculta los textos sensibles dentro de la app. Cambiar el icono " +
-                    "del lanzador requiere configuración adicional de Android que aún no está integrada.",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
 
         OutlinedButton(onClick = { showLogout = true }, modifier = Modifier.fillMaxWidth()) {
@@ -107,14 +92,54 @@ fun ConfiguracionScreen(state: AppState) {
             Text("Cerrar sesión")
         }
 
-        Button(
-            onClick = { showPurge = true },
+        // Zona de Seguridad: enmarcada y al final, para que nada aquí se toque por accidente.
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = RiskRed.copy(alpha = 0.07f),
+            border = BorderStroke(1.5.dp, RiskRed.copy(alpha = 0.55f)),
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = RiskRed),
         ) {
-            Icon(AppIcons.Borrar, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
-            Text("Borrar todos mis datos")
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                SectionHeader(AppIcons.Escudo, "Zona de Seguridad", RiskRed)
+                Text(
+                    "Para cuando necesitas que nadie más vea lo que hay aquí.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                SettingRow(AppIcons.Camuflaje, "Modo camuflaje", RiskYellow, settings.stealthMode) { checked ->
+                    state.updateSettings { it.copy(stealthMode = checked) }
+                    state.notify(
+                        if (checked) "Modo camuflaje activado" else "Modo camuflaje desactivado",
+                    )
+                }
+                Text(
+                    "Con el camuflaje activo, la app oculta sus textos sensibles y se muestra neutra. " +
+                        "Cambiar el icono y el nombre en el lanzador del teléfono requiere configuración " +
+                        "adicional de Android que todavía no está integrada.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Button(
+                    onClick = { showPurge = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = RiskRed),
+                ) {
+                    Icon(AppIcons.Borrar, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Borrado de emergencia")
+                }
+                Text(
+                    "Elimina de este dispositivo tu perfil, tus check-ins, tu diario y tus " +
+                        "conversaciones. No se puede deshacer.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 

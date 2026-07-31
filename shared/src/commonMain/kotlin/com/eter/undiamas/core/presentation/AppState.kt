@@ -17,6 +17,7 @@ import com.eter.undiamas.features.checkin.domain.RiskAssessor
 import com.eter.undiamas.features.diario.domain.DiaryEntry
 import com.eter.undiamas.features.diario.domain.SentimentAnalyzer
 import com.eter.undiamas.features.estadisticas.domain.RiskInsights
+import com.eter.undiamas.features.estadisticas.domain.RiskPatternDetector
 import com.eter.undiamas.features.ia.data.MockAiProvider
 import com.eter.undiamas.features.ia.domain.AiConversationService
 import com.eter.undiamas.features.sobriedad.domain.Milestones
@@ -67,9 +68,14 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
     val riskAssessor = RiskAssessor()
     val checkInHistory = CheckInHistory()
     val riskInsights = RiskInsights()
+    val riskPatternDetector = RiskPatternDetector()
     val milestones = Milestones()
     val sentimentAnalyzer = SentimentAnalyzer()
     val aiConversationService = AiConversationService(aiProvider)
+
+    /** Sesiones del búnker de 15 minutos completadas hasta el final. */
+    var urgeSessionsCompleted: Int by mutableStateOf(0)
+        private set
 
     private var nextCheckInId = 0
     private var nextDiaryId = 0
@@ -116,6 +122,10 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
         diaryEntries.add(0, entry.copy(id = (nextDiaryId++).toString()))
     }
 
+    fun registerUrgeOvercome() {
+        urgeSessionsCompleted += 1
+    }
+
     fun registerMood(mood: Mood) {
         moodEntries.add(
             0,
@@ -134,6 +144,7 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
         diaryEntries.clear()
         aiMessages.clear()
         moodEntries.clear()
+        urgeSessionsCompleted = 0
         nextCheckInId = 0
         nextDiaryId = 0
         nextMoodId = 0

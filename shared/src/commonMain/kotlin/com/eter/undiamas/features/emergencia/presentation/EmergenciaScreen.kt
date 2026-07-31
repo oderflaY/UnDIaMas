@@ -105,6 +105,8 @@ fun EmergenciaScreen(state: AppState, navigator: Navigator) {
             Text("Sostener el impulso · 15 min", style = MaterialTheme.typography.titleMedium)
         }
 
+        HelplineButtons(onDial = dial)
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             ToolChip(AppIcons.Respiracion, "Respirar", tool == Tool.RESPIRACION, Modifier.weight(1f)) { tool = Tool.RESPIRACION }
             ToolChip(AppIcons.Calma, "Anclaje", tool == Tool.ANCLAJE, Modifier.weight(1f)) { tool = Tool.ANCLAJE }

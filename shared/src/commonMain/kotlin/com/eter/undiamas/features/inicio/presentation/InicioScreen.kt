@@ -56,6 +56,9 @@ import com.eter.undiamas.core.presentation.theme.RiskGreen
 import com.eter.undiamas.core.presentation.theme.SavingsGoldEnd
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import com.eter.undiamas.features.estadisticas.domain.spanishName
+import com.eter.undiamas.core.presentation.theme.RiskYellow
+import com.eter.undiamas.core.presentation.components.EvolvingCompanion
 
 @Composable
 fun InicioScreen(state: AppState, navigator: Navigator) {
@@ -74,6 +77,11 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
     val todayMood = state.moodEntries.firstOrNull {
         it.registeredAt.toLocalDateTime(timeZone).date == today
     }?.mood
+
+    val riskyDay = state.riskPatternDetector.riskiestDay(state.checkIns, timeZone)
+    val warnToday = riskyDay != null && riskyDay == today.dayOfWeek
+    // Cuando toca el día que históricamente cuesta, el semáforo arranca en precaución.
+    val displayLevel = todayLevel ?: if (warnToday) RiskLevel.AMARILLO else null
 
     var quoteIndex by remember { mutableStateOf(0) }
     val enRiesgo = todayLevel == RiskLevel.AMARILLO || todayLevel == RiskLevel.ROJO
@@ -127,6 +135,13 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
                         clock = formatClock(streakSeconds),
                         ringColors = listOf(Color.White, RiskGreen, SavingsGoldEnd, Color.White),
                         trackColor = Color.White.copy(alpha = 0.22f),
+                        companion = {
+                            EvolvingCompanion(
+                                days = streakDays(streakSeconds),
+                                hasHistory = record > 0,
+                                color = Color.White,
+                            )
+                        },
                     )
                 }
             }
@@ -175,9 +190,33 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
             }
         }
 
+        if (warnToday && riskyDay != null) {
+            item {
+                SectionCard(containerColor = RiskYellow.copy(alpha = 0.16f)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            AppIcons.Alerta,
+                            contentDescription = null,
+                            tint = RiskYellow,
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Text("HOY PIDE MÁS CUIDADO", style = MaterialTheme.typography.labelMedium, color = RiskYellow)
+                    }
+                    Text(
+                        "Notamos que los ${riskyDay.spanishName()} suelen ser un desafío para ti. " +
+                            "Hoy tienes el control; mantente alerta.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+
         item {
             SectionCard(
-                containerColor = (todayLevel?.color ?: MaterialTheme.colorScheme.outline).copy(alpha = 0.14f),
+                containerColor = (displayLevel?.color ?: MaterialTheme.colorScheme.outline).copy(alpha = 0.14f),
                 onClick = { navigator.goTo(Screen.CheckIn) },
             ) {
                 Row(
@@ -193,7 +232,7 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
                             Icon(
                                 AppIcons.Semaforo,
                                 contentDescription = null,
-                                tint = todayLevel?.color ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = displayLevel?.color ?: MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp),
                             )
                             Text("SEMÁFORO DE HOY", style = MaterialTheme.typography.labelMedium)
@@ -225,7 +264,7 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    TrafficLight(level = todayLevel, modifier = Modifier.height(22.dp).width(90.dp))
+                    TrafficLight(level = displayLevel, modifier = Modifier.height(22.dp).width(90.dp))
                 }
             }
         }
