@@ -45,6 +45,12 @@ import com.eter.undiamas.features.sobriedad.presentation.SobrietyScreen
 import kotlinx.coroutines.launch
 import com.eter.undiamas.features.biometria.presentation.BiometriaScreen
 import com.eter.undiamas.core.domain.biometrics.BiometricsProvider
+import kotlinx.coroutines.flow.first
+import com.eter.undiamas.core.data.UserPreferences
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 
 private val bottomTabs = listOf(
     Screen.Inicio to AppIcons.Inicio,
@@ -56,17 +62,40 @@ private val bottomTabs = listOf(
 
 @Composable
 @Preview
-fun App(biometrics: BiometricsProvider? = null) {
-    val state = remember { AppState(biometricsProvider = biometrics) }
+fun App(
+    biometrics: BiometricsProvider? = null,
+    preferences: UserPreferences? = null,
+) {
+    val state = remember { AppState(biometricsProvider = biometrics, preferences = preferences) }
+    var restored by remember { mutableStateOf(preferences == null) }
+
+    // Restaura la sesión previa antes de decidir si mostrar el cuestionario inicial;
+    // sin esta espera se vería el onboarding un instante aunque ya estuviera completo.
+    LaunchedEffect(preferences) {
+        if (preferences == null) return@LaunchedEffect
+        state.restoreFrom(
+            completed = preferences.onboardingCompleted.first(),
+            savedName = preferences.displayName.first(),
+            savedAddiction = preferences.userAddiction.first(),
+        )
+        restored = true
+    }
     val navigator = remember { Navigator() }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     state.onNotify = { message -> scope.launch { snackbarHostState.showSnackbar(message) } }
 
     UnDiaMasTheme(darkTheme = state.settings.darkTheme) {
+        if (!restored) {
+            Scaffold { padding -> Box(modifier = Modifier.padding(padding)) {} }
+            return@UnDiaMasTheme
+        }
+
         if (!state.isOnboarded) {
             Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
-                Box(modifier = Modifier.padding(padding)) { OnboardingScreen(state) }
+                Box(modifier = Modifier.padding(padding)) {
+                    OnboardingScreen(state, onFinishOnboarding = { scope.launch { state.persistOnboarding() } })
+                }
             }
             return@UnDiaMasTheme
         }

@@ -7,6 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.health.connect.client.PermissionController
+import com.eter.undiamas.core.data.PREFERENCES_FILE
+import com.eter.undiamas.core.data.UserPreferences
+import com.eter.undiamas.core.data.initPreferencesPath
 import com.eter.undiamas.health.HealthDataExtractor
 import kotlinx.coroutines.CompletableDeferred
 
@@ -23,6 +26,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        // La ruta del archivo de preferencias necesita Context, así que se inyecta aquí.
+        initPreferencesPath(applicationContext.filesDir.resolve(PREFERENCES_FILE).absolutePath)
+        val preferences = UserPreferences()
+
         val biometrics = HealthDataExtractor(applicationContext) { permissions ->
             CompletableDeferred<Set<String>>().also { deferred ->
                 pendingPermissions = deferred
@@ -31,7 +38,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            App(biometrics = biometrics)
+            App(biometrics = biometrics, preferences = preferences)
         }
     }
 }

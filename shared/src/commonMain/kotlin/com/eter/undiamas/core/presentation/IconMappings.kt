@@ -1,6 +1,7 @@
 package com.eter.undiamas.core.presentation
 
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.eter.undiamas.core.domain.model.AddictionType
 import com.eter.undiamas.core.domain.model.Mood
 import com.eter.undiamas.core.domain.model.RiskLevel
 import com.eter.undiamas.core.domain.model.SupportRole
@@ -55,6 +56,19 @@ val AnchorKind.icon: ImageVector
         AnchorKind.META -> AppIcons.AnclaMeta
         AnchorKind.LUGAR -> AppIcons.AnclaLugar
         AnchorKind.RECUERDO -> AppIcons.AnclaRecuerdo
+    }
+
+val AddictionType.icon: ImageVector
+    get() = when (this) {
+        AddictionType.ALCOHOL -> AppIcons.AdiccionAlcohol
+        AddictionType.NICOTINA -> AppIcons.AdiccionNicotina
+        AddictionType.OPIOIDES -> AppIcons.AdiccionOpioides
+        AddictionType.ESTIMULANTES -> AppIcons.AdiccionEstimulantes
+        AddictionType.CANNABIS -> AppIcons.AdiccionCannabis
+        AddictionType.JUEGO -> AppIcons.AdiccionJuego
+        AddictionType.PANTALLAS -> AppIcons.AdiccionPantallas
+        AddictionType.COMPRAS -> AppIcons.AdiccionCompras
+        AddictionType.OTRA -> AppIcons.AdiccionOtra
     }
 
 val Sentiment.icon: ImageVector

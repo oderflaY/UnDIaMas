@@ -39,4 +39,6 @@ data class UserProfile(
     /** "Mi por qué": el motivo personal que la persona escribe para recordarse por qué empezó. */
     val personalWhy: String = "",
     val savingsGoal: SavingsGoal? = null,
+    /** Qué está intentando dejar; personaliza mensajes y alertas biométricas. */
+    val addiction: AddictionType? = null,
 )

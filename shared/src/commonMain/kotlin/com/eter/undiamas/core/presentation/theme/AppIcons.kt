@@ -4,6 +4,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Anchor
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Casino
+import androidx.compose.material.icons.rounded.Grass
+import androidx.compose.material.icons.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.LocalBar
+import androidx.compose.material.icons.rounded.Medication
+import androidx.compose.material.icons.rounded.ShoppingBag
+import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.SmokingRooms
 import androidx.compose.material.icons.rounded.DirectionsWalk
 import androidx.compose.material.icons.rounded.MonitorHeart
 import androidx.compose.material.icons.rounded.Inventory2
@@ -165,6 +174,17 @@ object AppIcons {
     // Biometría
     val Corazon: ImageVector = Icons.Rounded.MonitorHeart
     val Pasos: ImageVector = Icons.Rounded.DirectionsWalk
+
+    // Tipos de adicción
+    val AdiccionAlcohol: ImageVector = Icons.Rounded.LocalBar
+    val AdiccionNicotina: ImageVector = Icons.Rounded.SmokingRooms
+    val AdiccionOpioides: ImageVector = Icons.Rounded.Medication
+    val AdiccionEstimulantes: ImageVector = Icons.Rounded.Bolt
+    val AdiccionCannabis: ImageVector = Icons.Rounded.Grass
+    val AdiccionJuego: ImageVector = Icons.Rounded.Casino
+    val AdiccionPantallas: ImageVector = Icons.Rounded.Smartphone
+    val AdiccionCompras: ImageVector = Icons.Rounded.ShoppingBag
+    val AdiccionOtra: ImageVector = Icons.Rounded.HelpOutline
 
     // Detonantes
     val Estres: ImageVector = Icons.Rounded.Warning

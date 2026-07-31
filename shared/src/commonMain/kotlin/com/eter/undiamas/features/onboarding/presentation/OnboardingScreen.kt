@@ -38,11 +38,12 @@ import com.eter.undiamas.core.presentation.theme.AppIcons
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
+import com.eter.undiamas.core.domain.model.AddictionType
 
-private const val TOTAL_STEPS = 5
+private const val TOTAL_STEPS = 6
 
 @Composable
-fun OnboardingScreen(state: AppState) {
+fun OnboardingScreen(state: AppState, onFinishOnboarding: () -> Unit = {}) {
     var step by remember { mutableStateOf(0) }
 
     var name by remember { mutableStateOf("") }
@@ -51,12 +52,14 @@ fun OnboardingScreen(state: AppState) {
     var dailyExpense by remember { mutableStateOf("") }
     var contactName by remember { mutableStateOf("") }
     var contactPhone by remember { mutableStateOf("") }
+    var addiction by remember { mutableStateOf<AddictionType?>(null) }
 
     val canAdvance = when (step) {
-        0 -> name.isNotBlank()
-        1 -> daysSober.toLongOrNull() != null
-        2 -> recordDays.toLongOrNull() != null
-        3 -> dailyExpense.toDoubleOrNull() != null
+        0 -> addiction != null
+        1 -> name.isNotBlank()
+        2 -> daysSober.toLongOrNull() != null
+        3 -> recordDays.toLongOrNull() != null
+        4 -> dailyExpense.toDoubleOrNull() != null
         else -> true
     }
 
@@ -95,6 +98,14 @@ fun OnboardingScreen(state: AppState) {
         ) { current ->
             when (current) {
                 0 -> QuestionStep(
+                    icon = AppIcons.Escudo,
+                    question = "¿Qué estás intentando dejar?",
+                    hint = "Desliza para ver las opciones. Esto personaliza tus mensajes y las alertas de tu pulsera.",
+                ) {
+                    AddictionCarousel(selected = addiction, onSelect = { addiction = it })
+                }
+
+                1 -> QuestionStep(
                     icon = AppIcons.Perfil,
                     question = "¿Cómo quieres que te llamemos?",
                     hint = "Puede ser tu nombre o un apodo.",
@@ -109,7 +120,7 @@ fun OnboardingScreen(state: AppState) {
                     )
                 }
 
-                1 -> QuestionStep(
+                2 -> QuestionStep(
                     icon = AppIcons.Racha,
                     question = "¿Cuántos días llevas sobrio/a?",
                     hint = "Si empiezas hoy, deja 0. El contador arranca desde ahí.",
@@ -117,7 +128,7 @@ fun OnboardingScreen(state: AppState) {
                     NumberField(daysSober, { daysSober = it }, "Días")
                 }
 
-                2 -> QuestionStep(
+                3 -> QuestionStep(
                     icon = AppIcons.Record,
                     question = "¿Cuál es tu récord anterior?",
                     hint = "Tu mejor racha hasta hoy, en días. Si es la primera vez, deja 0.",
@@ -125,7 +136,7 @@ fun OnboardingScreen(state: AppState) {
                     NumberField(recordDays, { recordDays = it }, "Días de récord")
                 }
 
-                3 -> QuestionStep(
+                4 -> QuestionStep(
                     icon = AppIcons.Ahorro,
                     question = "¿Cuánto gastabas al día?",
                     hint = "Nos sirve para calcular cuánto llevas ahorrado.",
@@ -175,7 +186,9 @@ fun OnboardingScreen(state: AppState) {
                         previousDailyExpense = dailyExpense.toDoubleOrNull() ?: 0.0,
                         contactName = contactName,
                         contactPhone = contactPhone,
+                        addiction = addiction,
                     )
+                    onFinishOnboarding()
                 }
             },
         ) {

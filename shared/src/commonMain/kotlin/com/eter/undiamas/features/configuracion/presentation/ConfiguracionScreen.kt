@@ -44,12 +44,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Icon
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 fun ConfiguracionScreen(state: AppState) {
     val settings = state.settings
     var showLogout by remember { mutableStateOf(false) }
     var showPurge by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -176,6 +179,7 @@ fun ConfiguracionScreen(state: AppState) {
                     colors = ButtonDefaults.buttonColors(containerColor = RiskRed),
                     onClick = {
                         showPurge = false
+                        scope.launch { state.clearPersisted() }
                         state.purgeAllData()
                     },
                 ) { Text("Sí, borrar todo") }

@@ -33,6 +33,8 @@ import kotlinx.datetime.LocalDate
 import kotlin.time.Clock
 import kotlin.time.Instant
 import com.eter.undiamas.core.domain.biometrics.BiometricsProvider
+import com.eter.undiamas.core.domain.model.AddictionType
+import com.eter.undiamas.core.data.UserPreferences
 
 private const val SECONDS_PER_DAY = 60L * 60 * 24
 
@@ -53,6 +55,7 @@ data class AppSettings(
 class AppState(
     aiProvider: AiProvider = MockAiProvider(),
     val biometricsProvider: BiometricsProvider? = null,
+    private val preferences: UserPreferences? = null,
 ) {
     var profile: UserProfile by mutableStateOf(
         UserProfile(
@@ -123,6 +126,7 @@ class AppState(
         previousDailyExpense: Double,
         contactName: String,
         contactPhone: String,
+        addiction: AddictionType?,
     ) {
         val now = Clock.System.now()
         profile = profile.copy(
@@ -131,8 +135,28 @@ class AppState(
             recordStreakSeconds = recordDays * SECONDS_PER_DAY,
             previousDailyExpense = previousDailyExpense,
             trustedContact = if (contactName.isBlank()) null else TrustedContact(contactName, contactPhone),
+            addiction = addiction,
         )
         isOnboarded = true
+    }
+
+    /** Restaura lo persistido al arrancar, para no repetir el cuestionario inicial. */
+    fun restoreFrom(completed: Boolean, savedName: String, savedAddiction: AddictionType?) {
+        if (!completed) return
+        profile = profile.copy(
+            displayName = savedName.ifBlank { profile.displayName },
+            addiction = savedAddiction ?: profile.addiction,
+        )
+        isOnboarded = true
+    }
+
+    /** Lo que hay que persistir tras cerrar el cuestionario; lo invoca la pantalla raíz. */
+    suspend fun persistOnboarding() {
+        preferences?.saveOnboarding(profile.displayName, profile.addiction)
+    }
+
+    suspend fun clearPersisted() {
+        preferences?.clear()
     }
 
     fun registerCheckIn(entry: CheckInEntry) {
