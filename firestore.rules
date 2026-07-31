@@ -21,6 +21,23 @@ service cloud.firestore {
         }
       }
 
+      // Entradas del diario personal. Sin esta regla el catch-all de abajo las deniega
+      // y la pantalla de diario falla con PERMISSION_DENIED.
+      match /diario/{entradaId} {
+        allow read, write: if esDuenio(uid);
+      }
+
+      // Registros rapidos de animo desde la pantalla de inicio.
+      match /animos/{animoId} {
+        allow read, write: if esDuenio(uid);
+      }
+
+      // Conversacion con el asistente. Vive al nivel del usuario y no anidada bajo un
+      // check-in, porque es un hilo continuo y no un anexo de una respuesta concreta.
+      match /mensajesIA/{mensajeId} {
+        allow read, write: if esDuenio(uid);
+      }
+
       match /alertas/{alertaId} {
         // Las escribe unicamente la Cloud Function `agentChat` via Admin SDK, que no
         // pasa por estas reglas. El cliente solo puede leer las suyas.
