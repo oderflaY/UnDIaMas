@@ -51,6 +51,10 @@ import com.eter.undiamas.core.presentation.theme.EmergencyCoralStart
 import com.eter.undiamas.core.presentation.theme.PrimaryVioletStart
 import com.eter.undiamas.core.presentation.theme.RiskGreen
 import kotlinx.coroutines.launch
+import kotlin.time.Instant
+import kotlin.time.Clock
+import kotlinx.coroutines.delay
+import com.eter.undiamas.core.presentation.rememberNow
 
 private sealed interface UiState {
     data object Loading : UiState
@@ -64,28 +68,49 @@ private sealed interface UiState {
  * Sección de biometría: pasos y frecuencia cardíaca de las últimas 24 h leídos de la
  * pulsera vía Health Connect, más el JSON exacto que consume el análisis de prevención.
  */
+private const val REFRESH_INTERVAL_MILLIS = 60_000L
+
 @Composable
 fun BiometriaScreen(state: AppState) {
     val provider = state.biometricsProvider
     var ui by remember { mutableStateOf<UiState>(UiState.Loading) }
+    var lastUpdated by remember { mutableStateOf<Instant?>(null) }
     var showJson by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    suspend fun reload() {
+    /**
+     * [silent] distingue la carga inicial del refresco periódico: en silencio los datos
+     * se actualizan en su lugar sin spinner, y un fallo pasajero de fondo no borra de la
+     * pantalla la última lectura buena.
+     */
+    suspend fun reload(silent: Boolean = false) {
         if (provider == null) {
             ui = UiState.Unavailable
             return
         }
-        ui = UiState.Loading
-        ui = when (val result = provider.readLast24h()) {
-            is BiometricsResult.Ready -> UiState.Ready(result.snapshot)
-            BiometricsResult.PermissionsRequired -> UiState.NeedsPermissions
-            BiometricsResult.Unavailable -> UiState.Unavailable
-            is BiometricsResult.Error -> UiState.Error(result.message)
+        if (!silent) ui = UiState.Loading
+        when (val result = provider.readLast24h()) {
+            is BiometricsResult.Ready -> {
+                ui = UiState.Ready(result.snapshot)
+                lastUpdated = Clock.System.now()
+            }
+            // Si revocaron el permiso a media sesión sí hay que decirlo, aun en silencio.
+            BiometricsResult.PermissionsRequired -> ui = UiState.NeedsPermissions
+            BiometricsResult.Unavailable -> ui = UiState.Unavailable
+            is BiometricsResult.Error ->
+                if (!silent || ui !is UiState.Ready) ui = UiState.Error(result.message)
         }
     }
 
-    LaunchedEffect(Unit) { reload() }
+    // Carga inicial y sondeo cada minuto mientras la pantalla esté visible; al salir,
+    // LaunchedEffect se cancela y el sondeo muere con ella.
+    LaunchedEffect(Unit) {
+        reload()
+        while (true) {
+            delay(REFRESH_INTERVAL_MILLIS)
+            reload(silent = true)
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -97,6 +122,7 @@ fun BiometriaScreen(state: AppState) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        lastUpdated?.let { updated -> LastUpdatedLine(updated) }
 
         when (val current = ui) {
             UiState.Loading -> Box(
@@ -144,13 +170,38 @@ fun BiometriaScreen(state: AppState) {
                 SnapshotContent(current.snapshot, showJson, onToggleJson = { showJson = !showJson })
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { scope.launch { reload() } },
+                    onClick = { scope.launch { reload(silent = true) } },
                 ) {
                     Icon(AppIcons.Refrescar, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text("  Actualizar lectura")
+                    Text("  Actualizar ahora")
                 }
             }
         }
+    }
+}
+
+/** "Actualizado hace Ns · se refresca cada minuto", con el contador avanzando en vivo. */
+@Composable
+private fun LastUpdatedLine(updated: Instant) {
+    val now by rememberNow()
+    val seconds = (now.epochSeconds - updated.epochSeconds).coerceAtLeast(0)
+    val age = if (seconds < 60) "hace ${seconds}s" else "hace ${seconds / 60} min"
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            AppIcons.Reloj,
+            contentDescription = null,
+            tint = RiskGreen,
+            modifier = Modifier.size(14.dp),
+        )
+        Text(
+            "Actualizado $age · se refresca cada minuto",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
