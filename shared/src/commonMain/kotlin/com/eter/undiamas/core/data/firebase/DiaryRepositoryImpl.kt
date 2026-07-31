@@ -3,35 +3,49 @@ package com.eter.undiamas.core.data.firebase
 import com.eter.undiamas.core.domain.repository.DiaryRepository
 import com.eter.undiamas.features.diario.domain.DiaryEntry
 import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.firestore.Direction
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.map
 
-private const val COLECCION_USUARIOS = "usuarios"
-private const val SUBCOLECCION_DIARIO = "diario"
-
-/** Adaptador real sobre Cloud Firestore: `/usuarios/{uid}/diario`, acotado siempre al uid recibido. */
+/**
+ * Diario sobre la coleccion plana `/journal_entries`.
+ *
+ * El filtro por `userId` no es opcional: es lo unico que aisla el diario de una persona
+ * del de otra, tanto en la consulta como en la regla de seguridad.
+ */
 class DiaryRepositoryImpl : DiaryRepository {
     private val firestore = Firebase.firestore
 
-    private fun diarioDe(uid: String) =
-        firestore.collection(COLECCION_USUARIOS).document(uid).collection(SUBCOLECCION_DIARIO)
+    private fun consultaDe(uid: String) =
+        firestore.collection(Colecciones.JOURNAL_ENTRIES).where { "userId" equalTo uid }
 
     override fun observeRecent(uid: String, limit: Int) =
-        diarioDe(uid)
-            .orderBy("fecha", Direction.DESCENDING)
-            .limit(limit)
-            .snapshots
-            .map { snapshot ->
-                snapshot.documents.map { doc -> doc.data<DiaryEntryDoc>().toDiaryEntry(id = doc.id, uid = uid) }
-            }
+        consultaDe(uid).snapshots.map { snapshot ->
+            snapshot.documents
+                .map { doc ->
+                    val data = doc.data<JournalEntryDoc>()
+                    DiaryEntry(
+                        id = doc.id,
+                        userId = data.userId,
+                        createdAt = data.createdAt.toInstant(),
+                        text = data.content,
+                    )
+                }
+                .sortedByDescending { it.createdAt }
+                .take(limit)
+        }
 
     override suspend fun add(uid: String, entry: DiaryEntry): String {
-        val ref = diarioDe(uid).add(entry.toDiaryEntryDoc())
+        val ref = firestore.collection(Colecciones.JOURNAL_ENTRIES).add(
+            JournalEntryDoc(
+                userId = uid,
+                content = entry.text,
+                createdAt = entry.createdAt.toFirestoreTimestamp(),
+            ),
+        )
         return ref.id
     }
 
     override suspend fun deleteAll(uid: String) {
-        diarioDe(uid).get().documents.forEach { it.reference.delete() }
+        consultaDe(uid).get().documents.forEach { it.reference.delete() }
     }
 }

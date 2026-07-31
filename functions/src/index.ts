@@ -3,7 +3,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { buildEmergencyAction } from "./emergencyProtocol";
 import { buildLogIaTrace } from "./logIaTrace";
@@ -15,10 +15,13 @@ initializeApp();
 
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
-const COLECCION_USUARIOS = "usuarios";
-const SUBCOLECCION_CHECKINS = "checkins";
-const SUBCOLECCION_ALERTAS = "alertas";
-const SUBCOLECCION_MENSAJES_IA = "mensajesIA";
+// Colecciones planas en la raiz: el aislamiento sale del campo `userId` del documento,
+// no de la ruta. Los mismos nombres que usa la app en Colecciones.kt.
+const COLECCION_USERS = "users";
+const COLECCION_CHECK_INS = "check_ins";
+const COLECCION_AI_MESSAGES = "ai_messages";
+const COLECCION_ALERTS = "alerts";
+const COLECCION_AI_LOGS = "ai_logs";
 
 /**
  * Al crearse un check-in en rojo, envia la notificacion de emergencia y sugiere el
@@ -26,15 +29,19 @@ const SUBCOLECCION_MENSAJES_IA = "mensajesIA";
  * (funcion pura, cubierta por tests); aqui solo se conecta con Firebase.
  */
 export const onCheckInCreated = onDocumentCreated(
-  `${COLECCION_USUARIOS}/{userId}/${SUBCOLECCION_CHECKINS}/{checkInId}`,
+  `${COLECCION_CHECK_INS}/{checkInId}`,
   async (event) => {
     const checkInDoc = event.data?.data();
-    if (!checkInDoc) return;
-    const checkIn = toCheckInRecord(event.params.checkInId, event.params.userId, checkInDoc);
+    // En el esquema plano el uid ya no viene en la ruta: viene dentro del documento.
+    // Un check-in sin userId no se puede atribuir a nadie, asi que no se procesa.
+    const userId = checkInDoc?.userId;
+    if (!checkInDoc || typeof userId !== "string" || userId.length === 0) return;
 
-    const profileSnap = await getFirestore().collection(COLECCION_USUARIOS).doc(event.params.userId).get();
+    const checkIn = toCheckInRecord(event.params.checkInId, userId, checkInDoc);
+
+    const profileSnap = await getFirestore().collection(COLECCION_USERS).doc(userId).get();
     if (!profileSnap.exists) return;
-    const profile = toUserProfileRecord(event.params.userId, profileSnap.data() ?? {});
+    const profile = toUserProfileRecord(userId, profileSnap.data() ?? {});
 
     const action = buildEmergencyAction(checkIn, profile);
     if (!action) return;
@@ -47,7 +54,7 @@ export const onCheckInCreated = onDocumentCreated(
     }
 
     logger.info("Protocolo de emergencia activado", {
-      userId: event.params.userId,
+      userId,
       checkInId: event.params.checkInId,
       suggestedContact: action.suggestedContact?.name,
     });
@@ -56,30 +63,35 @@ export const onCheckInCreated = onDocumentCreated(
 
 /**
  * Al crearse un mensaje en el chat de IA, lo enlaza con el check-in mas reciente del
- * usuario y escribe el registro de trazabilidad en `logs_ia` (check-in -> nivel de
+ * usuario y escribe el registro de trazabilidad en `ai_logs` (check-in -> nivel de
  * riesgo -> respuesta de IA). El chat no esta atado a un check-in especifico en la UI,
  * asi que se usa el mas reciente como contexto de riesgo vigente.
  */
 export const onAiMessageCreated = onDocumentCreated(
-  `${COLECCION_USUARIOS}/{userId}/${SUBCOLECCION_MENSAJES_IA}/{aiMessageId}`,
+  `${COLECCION_AI_MESSAGES}/{aiMessageId}`,
   async (event) => {
     const aiMessageDoc = event.data?.data();
-    if (!aiMessageDoc) return;
-    const aiMessage = toAiMessageRecord(event.params.aiMessageId, event.params.userId, aiMessageDoc);
+    const userId = aiMessageDoc?.userId;
+    if (!aiMessageDoc || typeof userId !== "string" || userId.length === 0) return;
+
+    const aiMessage = toAiMessageRecord(event.params.aiMessageId, userId, aiMessageDoc);
 
     const latestCheckInSnap = await getFirestore()
-      .collection(COLECCION_USUARIOS)
-      .doc(event.params.userId)
-      .collection(SUBCOLECCION_CHECKINS)
-      .orderBy("fechaHora", "desc")
+      .collection(COLECCION_CHECK_INS)
+      .where("userId", "==", userId)
+      .orderBy("timestamp", "desc")
       .limit(1)
       .get();
     if (latestCheckInSnap.empty) return;
     const latestDoc = latestCheckInSnap.docs[0];
-    const checkIn = toCheckInRecord(latestDoc.id, event.params.userId, latestDoc.data());
+    const checkIn = toCheckInRecord(latestDoc.id, userId, latestDoc.data());
 
     const trace = buildLogIaTrace(checkIn, aiMessage);
-    await getFirestore().collection("logs_ia").add(trace);
+    // `buildLogIaTrace` es pura y devuelve la fecha como ISO; al persistir se convierte a
+    // Timestamp, que es como estan todas las demas fechas de la base.
+    await getFirestore()
+      .collection(COLECCION_AI_LOGS)
+      .add({ ...trace, createdAt: Timestamp.fromMillis(Date.parse(trace.createdAt)) });
   }
 );
 
@@ -99,20 +111,26 @@ export const agentChat = onCall({ secrets: [geminiApiKey] }, async (request) => 
   }
 
   const firestore = getFirestore();
-  const checkInsOf = firestore.collection(COLECCION_USUARIOS).doc(userId).collection(SUBCOLECCION_CHECKINS);
 
   const outcome = await runAgentTurn(userId, prompt, {
     gemini: new RestGeminiClient(geminiApiKey.value()),
     readRecentCheckIns: async (uid, limit) => {
-      const snap = await checkInsOf.orderBy("fechaHora", "desc").limit(limit).get();
+      const snap = await firestore
+        .collection(COLECCION_CHECK_INS)
+        .where("userId", "==", uid)
+        .orderBy("timestamp", "desc")
+        .limit(limit)
+        .get();
       return snap.docs.map((doc) => toCheckInRecord(doc.id, uid, doc.data()));
     },
     saveAlert: async (alert) => {
-      const ref = await firestore
-        .collection(COLECCION_USUARIOS)
-        .doc(alert.userId)
-        .collection(SUBCOLECCION_ALERTAS)
-        .add({ nivelRiesgo: alert.riskLevel, mensaje: alert.message, fecha: alert.createdAt });
+      const ref = await firestore.collection(COLECCION_ALERTS).add({
+        userId: alert.userId,
+        riskLevel: alert.riskLevel,
+        message: alert.message,
+        timestamp: Timestamp.fromMillis(Date.parse(alert.createdAt) || Date.now()),
+        handled: false,
+      });
       return ref.id;
     },
   });

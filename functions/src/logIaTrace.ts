@@ -10,7 +10,7 @@ export interface LogIaTraceEntry {
 
 /**
  * Construye el registro de trazabilidad check-in -> nivel de riesgo -> respuesta de IA
- * que alimenta la coleccion `logs_ia`. Lanza error si el mensaje de IA pertenece a otro
+ * que alimenta la coleccion `ai_logs`. Lanza error si el mensaje de IA pertenece a otro
  * usuario: los datos de recaida/riesgo nunca deben cruzarse entre UIDs distintos.
  */
 export function buildLogIaTrace(

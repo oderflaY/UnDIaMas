@@ -1,41 +1,57 @@
 package com.eter.undiamas.core.data.firebase
 
 import com.eter.undiamas.core.domain.model.AiMessage
+import com.eter.undiamas.core.domain.model.AiMessageRole
 import com.eter.undiamas.core.domain.repository.AiMessageRepository
 import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.firestore.Direction
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.map
 
-private const val COLECCION_USUARIOS = "usuarios"
-private const val SUBCOLECCION_MENSAJES_IA = "mensajesIA"
-
 /**
- * Adaptador real sobre Cloud Firestore: `/usuarios/{uid}/mensajesIA`, acotado siempre al
- * uid recibido. Cada documento creado aqui dispara `onAiMessageCreated` en Cloud Functions
- * para la trazabilidad de `logs_ia`.
+ * Conversacion con el asistente sobre la coleccion plana `/ai_messages`.
+ *
+ * Cada documento creado aqui dispara `onAiMessageCreated` en Cloud Functions para la
+ * trazabilidad de `ai_logs`.
  */
 class AiMessageRepositoryImpl : AiMessageRepository {
     private val firestore = Firebase.firestore
 
-    private fun mensajesDe(uid: String) =
-        firestore.collection(COLECCION_USUARIOS).document(uid).collection(SUBCOLECCION_MENSAJES_IA)
+    private fun consultaDe(uid: String) =
+        firestore.collection(Colecciones.AI_MESSAGES).where { "userId" equalTo uid }
 
     override fun observeRecent(uid: String, limit: Int) =
-        mensajesDe(uid)
-            .orderBy("fecha", Direction.DESCENDING)
-            .limit(limit)
-            .snapshots
-            .map { snapshot ->
-                snapshot.documents.map { doc -> doc.data<AiMessageDoc>().toAiMessage(id = doc.id, uid = uid) }
-            }
+        consultaDe(uid).snapshots.map { snapshot ->
+            snapshot.documents
+                .map { doc ->
+                    val data = doc.data<AiMessageFlatDoc>()
+                    AiMessage(
+                        id = doc.id,
+                        userId = data.userId,
+                        role = runCatching { AiMessageRole.valueOf(data.role) }
+                            .getOrDefault(AiMessageRole.ASISTENTE),
+                        content = data.content,
+                        riskLevelContext = data.riskLevelContext?.toRiskLevelOrGreen(),
+                        sentAt = data.timestamp.toInstant(),
+                    )
+                }
+                .sortedByDescending { it.sentAt }
+                .take(limit)
+        }
 
     override suspend fun add(uid: String, message: AiMessage): String {
-        val ref = mensajesDe(uid).add(message.toAiMessageDoc())
+        val ref = firestore.collection(Colecciones.AI_MESSAGES).add(
+            AiMessageFlatDoc(
+                userId = uid,
+                role = message.role.name,
+                content = message.content,
+                riskLevelContext = message.riskLevelContext?.toFirestoreCode(),
+                timestamp = message.sentAt.toFirestoreTimestamp(),
+            ),
+        )
         return ref.id
     }
 
     override suspend fun deleteAll(uid: String) {
-        mensajesDe(uid).get().documents.forEach { it.reference.delete() }
+        consultaDe(uid).get().documents.forEach { it.reference.delete() }
     }
 }

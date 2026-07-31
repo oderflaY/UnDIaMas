@@ -80,6 +80,39 @@ service cloud.firestore {
       allow update, delete: if autenticado() && resource.data.userId == request.auth.uid;
     }
 
+    // Alertas del agente de IA. Solo lectura para la persona duena: las escribe
+    // exclusivamente Cloud Functions con el Admin SDK, que se salta estas reglas.
+    match /alerts/{alertId} {
+      allow read: if autenticado() && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Diario, animos y chat con la IA: no venian en el volcado inicial porque nada los
+    // habia escrito todavia, pero la app si los usa. Mismo patron plano y mismo filtro
+    // obligatorio por userId.
+    match /journal_entries/{entryId} {
+      allow read: if autenticado()
+        && (esTerapeuta() || resource.data.userId == request.auth.uid);
+      allow create: if autenticado() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if autenticado() && resource.data.userId == request.auth.uid;
+    }
+
+    match /mood_logs/{moodId} {
+      allow read: if autenticado()
+        && (esTerapeuta() || resource.data.userId == request.auth.uid);
+      allow create: if autenticado() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if autenticado() && resource.data.userId == request.auth.uid;
+    }
+
+    // La conversacion con el asistente es de lo mas intimo que guarda la app: aqui el
+    // terapeuta NO entra, solo la persona.
+    match /ai_messages/{messageId} {
+      allow read, write: if autenticado() && (
+        (resource != null && resource.data.userId == request.auth.uid) ||
+        (request.resource != null && request.resource.data.userId == request.auth.uid)
+      );
+    }
+
     match /sobriety_logs/{logId} {
       allow read: if autenticado()
         && (esTerapeuta() || resource.data.userId == request.auth.uid);

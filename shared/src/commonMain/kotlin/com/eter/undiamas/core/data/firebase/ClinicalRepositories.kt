@@ -19,6 +19,10 @@ object Colecciones {
     const val CLINICAL_NOTES = "clinical_notes"
     const val AI_LOGS = "ai_logs"
     const val SOBRIETY_LOGS = "sobriety_logs"
+    const val JOURNAL_ENTRIES = "journal_entries"
+    const val MOOD_LOGS = "mood_logs"
+    const val AI_MESSAGES = "ai_messages"
+    const val ALERTS = "alerts"
 }
 
 private const val CAMPO_UID = "uid"
@@ -30,6 +34,10 @@ fun Timestamp?.toInstant(): Instant =
 
 /** Instante actual como Timestamp de Firestore, para escribir fechas. */
 fun nowTimestamp(): Timestamp = Timestamp.now()
+
+/** Camino inverso: del Instant del dominio al Timestamp que espera Firestore. */
+fun Instant.toFirestoreTimestamp(): Timestamp =
+    Timestamp(seconds = epochSeconds, nanoseconds = nanosecondsOfSecond)
 
 /**
  * Cuentas de `/users`.

@@ -320,6 +320,7 @@ class AppState(
         previousDailyExpense: Double,
         contactName: String,
         contactPhone: String,
+        addiction: AddictionType?,
     ) {
         val now = Clock.System.now()
         profile = profile.copy(
@@ -328,9 +329,23 @@ class AppState(
             recordStreakSeconds = recordDays * SECONDS_PER_DAY,
             previousDailyExpense = previousDailyExpense,
             trustedContact = if (contactName.isBlank()) null else TrustedContact(contactName, contactPhone),
+            addiction = addiction,
         )
         isOnboarded = true
         persistProfile()
+    }
+
+    /**
+     * Restaura lo guardado localmente para pintar algo util antes de que Firestore responda.
+     * Cuando llega el perfil remoto, el listener lo sobreescribe: Firestore manda.
+     */
+    fun restoreFrom(completed: Boolean, savedName: String, savedAddiction: AddictionType?) {
+        if (!completed) return
+        profile = profile.copy(
+            displayName = savedName.ifBlank { profile.displayName },
+            addiction = savedAddiction ?: profile.addiction,
+        )
+        isOnboarded = true
     }
 
     private fun persistProfile() {
