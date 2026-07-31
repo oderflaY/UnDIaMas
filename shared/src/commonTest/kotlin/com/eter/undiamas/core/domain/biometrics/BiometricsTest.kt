@@ -37,9 +37,9 @@ class BiometricsTest {
         val original = snapshot(listOf(70, 95))
 
         val json = original.toAnalysisJson()
-        val restored = Json.decodeFromString<BiometricsSnapshot>(json)
+        val restored = Json.decodeFromString<AnalysisPayload>(json)
 
-        assertEquals(original, restored)
+        assertEquals(original, restored.snapshot)
     }
 
     @Test

@@ -55,6 +55,8 @@ import kotlin.time.Instant
 import kotlin.time.Clock
 import kotlinx.coroutines.delay
 import com.eter.undiamas.core.presentation.rememberNow
+import com.eter.undiamas.core.presentation.theme.RiskYellow
+import com.eter.undiamas.core.domain.biometrics.SpikeDetector
 
 private sealed interface UiState {
     data object Loading : UiState
@@ -234,6 +236,7 @@ private fun SnapshotContent(snapshot: BiometricsSnapshot, showJson: Boolean, onT
                 samples = snapshot.heartRate.map { it.bpm },
                 modifier = Modifier.fillMaxWidth().height(120.dp),
             )
+            val spikes = remember(snapshot) { SpikeDetector().detect(snapshot.heartRate) }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -241,6 +244,7 @@ private fun SnapshotContent(snapshot: BiometricsSnapshot, showJson: Boolean, onT
                 Stat("MÍN", snapshot.minBpm, RiskGreen)
                 Stat("MEDIA", snapshot.avgBpm, PrimaryVioletStart)
                 Stat("MÁX", snapshot.maxBpm, EmergencyCoralStart)
+                Stat("PICOS", spikes.size.toLong(), RiskYellow)
             }
             Text(
                 "Los picos sostenidos de FC en reposo son una de las señales que el análisis " +

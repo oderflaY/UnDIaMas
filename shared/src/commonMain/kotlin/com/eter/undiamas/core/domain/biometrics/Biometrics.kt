@@ -33,8 +33,31 @@ private val analysisJson = Json {
     encodeDefaults = true
 }
 
+/** Lo que consume el algoritmo: la foto cruda más los picos de FC ya resaltados. */
+@Serializable
+data class AnalysisPayload(
+    val snapshot: BiometricsSnapshot,
+    val heartRateSpikes: List<HeartRateSpike>,
+)
+
 /** Serializa la foto con kotlinx.serialization, que ya es la librería JSON del proyecto. */
-fun BiometricsSnapshot.toAnalysisJson(): String = analysisJson.encodeToString(this)
+fun BiometricsSnapshot.toAnalysisJson(): String =
+    analysisJson.encodeToString(AnalysisPayload(this, SpikeDetector().detect(heartRate)))
+
+/**
+ * Punto de entrada de una sola llamada para el algoritmo: lectura de 24 h → JSON listo,
+ * con cada caso no exitoso convertido en un failure descriptivo en vez de una excepción
+ * suelta que tumbe la app.
+ */
+suspend fun BiometricsProvider.readLast24hAsAnalysisJson(): Result<String> =
+    when (val result = readLast24h()) {
+        is BiometricsResult.Ready -> Result.success(result.snapshot.toAnalysisJson())
+        BiometricsResult.PermissionsRequired ->
+            Result.failure(IllegalStateException("Faltan los permisos de Health Connect"))
+        BiometricsResult.Unavailable ->
+            Result.failure(IllegalStateException("Health Connect no está disponible en este dispositivo"))
+        is BiometricsResult.Error -> Result.failure(IllegalStateException(result.message))
+    }
 
 /** Resultado de intentar leer la pulsera, con cada caso que la UI debe distinguir. */
 sealed interface BiometricsResult {
