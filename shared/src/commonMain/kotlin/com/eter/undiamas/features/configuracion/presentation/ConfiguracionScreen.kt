@@ -30,6 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
+import com.eter.undiamas.core.presentation.closeApp
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.eter.undiamas.core.presentation.components.SectionCard
 import com.eter.undiamas.core.presentation.components.pressable
 import com.eter.undiamas.core.presentation.theme.AccentDiario
@@ -79,6 +82,48 @@ fun ConfiguracionScreen(state: AppState) {
             SectionHeader(AppIcons.TemaOscuro, "Apariencia", RiskYellow)
             SettingRow(AppIcons.TemaOscuro, "Tema oscuro", RiskYellow, settings.darkTheme) { checked ->
                 state.updateSettings { it.copy(darkTheme = checked) }
+            }
+        }
+
+        SectionCard {
+            SectionHeader(AppIcons.Perfil, "Cuenta", AccentDiario)
+            Text(
+                "Sesión activa: ${state.uid?.take(8) ?: "…"} (anónima). Vincula un correo " +
+                    "para no perder tus datos si cambias de dispositivo.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            var email by remember { mutableStateOf("") }
+            var password by remember { mutableStateOf("") }
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Correo") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Contraseña") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                singleLine = true,
+            )
+            state.authError?.let {
+                Text(it, style = MaterialTheme.typography.labelMedium, color = RiskRed)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { state.signInWithEmail(email, password) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Iniciar sesión") }
+                Button(
+                    onClick = { state.linkAccountWithEmail(email, password) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Crear cuenta") }
             }
         }
 
@@ -156,7 +201,8 @@ fun ConfiguracionScreen(state: AppState) {
                     colors = ButtonDefaults.buttonColors(containerColor = RiskRed),
                     onClick = {
                         showLogout = false
-                        state.notify("Sesión cerrada (pendiente de Firebase Auth)")
+                        state.signOut()
+                        state.notify("Sesión cerrada")
                     },
                 ) { Text("Cerrar sesión") }
             },

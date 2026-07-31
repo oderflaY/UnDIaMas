@@ -2,7 +2,9 @@ package com.eter.undiamas
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -16,8 +18,10 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -50,7 +54,11 @@ import com.eter.undiamas.core.data.UserPreferences
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import com.eter.undiamas.core.presentation.diagnoseStartupError
 
 private val bottomTabs = listOf(
     Screen.Inicio to AppIcons.Inicio,
@@ -85,9 +93,41 @@ fun App(
     val scope = rememberCoroutineScope()
     state.onNotify = { message -> scope.launch { snackbarHostState.showSnackbar(message) } }
 
+    LaunchedEffect(Unit) { state.start() }
+
     UnDiaMasTheme(darkTheme = state.settings.darkTheme) {
-        if (!restored) {
-            Scaffold { padding -> Box(modifier = Modifier.padding(padding)) {} }
+        // Un fallo de conexion no debe dejar la app en blanco ni tumbarla: se explica y se reintenta.
+        state.startupError?.let { error ->
+            val diagnosis = diagnoseStartupError(error)
+            Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text(diagnosis.title, style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        diagnosis.advice,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        diagnosis.technicalDetail,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                    Button(onClick = { state.retryStart() }) { Text("Reintentar") }
+                }
+            }
+            return@UnDiaMasTheme
+        }
+
+        // Mientras Firestore autentica, o mientras se restauran las preferencias locales,
+        // se muestra el mismo indicador: para quien usa la app es una sola espera.
+        if (state.isLoading || !restored) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
             return@UnDiaMasTheme
         }
 
@@ -134,6 +174,13 @@ fun App(
                 }
             },
             snackbarHost = {
+                // Una coleccion que no cargo se avisa sin bloquear el resto de la app.
+                state.dataWarning?.let { warning ->
+                    LaunchedEffect(warning) {
+                        snackbarHostState.showSnackbar(warning)
+                        state.clearDataWarning()
+                    }
+                }
                 SnackbarHost(snackbarHostState) { data ->
                     Snackbar(
                         shape = MaterialTheme.shapes.medium,

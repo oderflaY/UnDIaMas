@@ -1,0 +1,26 @@
+{
+  "name": "undiamas-functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloud Functions de orquestacion de reglas de negocio para UnDIaMas (protocolo de emergencia, agregacion de estadisticas, trazabilidad de IA).",
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.16.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.3"
+  }
+}

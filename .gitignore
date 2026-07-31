@@ -23,6 +23,9 @@ node_modules/
 google-services.json
 GoogleService-Info.plist
 .env
+.env.*
+!.env.example
+functions/.env*
 .firebase/
 firebase-debug.log
 firestore-debug.log

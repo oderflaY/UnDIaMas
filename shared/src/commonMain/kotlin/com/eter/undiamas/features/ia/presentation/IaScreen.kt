@@ -61,10 +61,9 @@ fun IaScreen(state: AppState) {
 
     fun send(prompt: String) {
         if (prompt.isBlank()) return
-        state.aiMessages.add(
-            0,
+        state.registerAiMessage(
             AiMessage(
-                id = "user-${state.aiMessages.size}",
+                id = "",
                 userId = state.profile.userId,
                 role = AiMessageRole.USUARIO,
                 content = prompt,
@@ -81,7 +80,7 @@ fun IaScreen(state: AppState) {
                 riskLevel = lastRiskLevel,
                 history = state.aiMessages,
             )
-            state.aiMessages.add(0, response)
+            state.registerAiMessage(response)
             isTyping = false
         }
     }

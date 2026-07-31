@@ -19,6 +19,9 @@ material3 = "1.11.0-alpha07"
 materialIcons = "1.7.3"
 healthConnect = "1.1.0"
 datastore = "1.1.7"
+googleServices = "4.5.0"
+gitliveFirebase = "2.5.0"
+firebaseBom = "34.17.0"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
@@ -46,6 +49,15 @@ compose-materialIconsExtended = { module = "org.jetbrains.compose.material:mater
 compose-uiBackHandler = { module = "org.jetbrains.compose.ui:ui-backhandler", version.ref = "composeMultiplatform" }
 androidx-healthConnect = { module = "androidx.health.connect:connect-client", version.ref = "healthConnect" }
 androidx-datastorePreferences = { module = "androidx.datastore:datastore-preferences-core", version.ref = "datastore" }
+firebase-app = { module = "dev.gitlive:firebase-app", version.ref = "gitliveFirebase" }
+firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "gitliveFirebase" }
+firebase-firestore = { module = "dev.gitlive:firebase-firestore", version.ref = "gitliveFirebase" }
+firebase-functions = { module = "dev.gitlive:firebase-functions", version.ref = "gitliveFirebase" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-android-common = { module = "com.google.firebase:firebase-common", version = "22.2.0" }
+firebase-android-auth = { module = "com.google.firebase:firebase-auth", version = "24.2.0" }
+firebase-android-firestore = { module = "com.google.firebase:firebase-firestore", version = "26.5.0" }
+firebase-android-functions = { module = "com.google.firebase:firebase-functions", version = "22.1.1" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -54,3 +66,4 @@ composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMul
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+googleServices = { id = "com.google.gms.google-services", version.ref = "googleServices" }
