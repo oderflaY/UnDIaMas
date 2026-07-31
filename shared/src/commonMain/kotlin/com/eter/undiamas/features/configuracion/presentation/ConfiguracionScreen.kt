@@ -14,11 +14,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,6 +73,44 @@ fun ConfiguracionScreen(state: AppState) {
         }
 
         SectionCard {
+            Text("Cuenta", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Sesión activa: ${state.uid?.take(8) ?: "…"} (anónima). Vincula un correo para " +
+                    "no perder tus datos si cambias de dispositivo.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            var email by remember { mutableStateOf("") }
+            var password by remember { mutableStateOf("") }
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Correo") },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Contraseña") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            state.authError?.let {
+                Text(it, style = MaterialTheme.typography.labelMedium, color = RiskRed)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { state.signInWithEmail(email, password) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Iniciar sesión") }
+                Button(
+                    onClick = { state.linkAccountWithEmail(email, password) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Crear cuenta") }
+            }
+        }
+
+        SectionCard {
             Text("Seguridad y datos", style = MaterialTheme.typography.titleMedium)
             SettingRow("🔒", "Bloquear el diario", AccentDiario, settings.diaryLocked) { checked ->
                 state.updateSettings { it.copy(diaryLocked = checked) }
@@ -116,7 +156,8 @@ fun ConfiguracionScreen(state: AppState) {
                     colors = ButtonDefaults.buttonColors(containerColor = RiskRed),
                     onClick = {
                         showLogout = false
-                        state.notify("Sesión cerrada (pendiente de Firebase Auth)")
+                        state.signOut()
+                        state.notify("Sesión cerrada")
                     },
                 ) { Text("Cerrar sesión") }
             },

@@ -2,7 +2,9 @@ package com.eter.undiamas
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -15,8 +17,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -55,7 +59,16 @@ fun App() {
     val scope = rememberCoroutineScope()
     state.onNotify = { message -> scope.launch { snackbarHostState.showSnackbar(message) } }
 
+    LaunchedEffect(Unit) { state.start() }
+
     UnDiaMasTheme(darkTheme = state.settings.darkTheme) {
+        if (state.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@UnDiaMasTheme
+        }
+
         if (!state.isOnboarded) {
             Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
                 Box(modifier = Modifier.padding(padding)) { OnboardingScreen(state) }

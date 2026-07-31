@@ -4,6 +4,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.eter.undiamas.core.data.firebase.AiMessageRepositoryImpl
+import com.eter.undiamas.core.data.firebase.AuthRepositoryImpl
+import com.eter.undiamas.core.data.firebase.CheckInRepositoryImpl
+import com.eter.undiamas.core.data.firebase.DiaryRepositoryImpl
+import com.eter.undiamas.core.data.firebase.MoodRepositoryImpl
+import com.eter.undiamas.core.data.firebase.PerfilRepositoryImpl
+import com.eter.undiamas.core.data.firebase.configureFirebaseEmulatorsIfNeeded
 import com.eter.undiamas.core.domain.ai.AiProvider
 import com.eter.undiamas.core.domain.model.AiMessage
 import com.eter.undiamas.core.domain.model.CheckInEntry
@@ -11,16 +18,27 @@ import com.eter.undiamas.core.domain.model.Mood
 import com.eter.undiamas.core.domain.model.MoodEntry
 import com.eter.undiamas.core.domain.model.TrustedContact
 import com.eter.undiamas.core.domain.model.UserProfile
+import com.eter.undiamas.core.domain.repository.AiMessageRepository
+import com.eter.undiamas.core.domain.repository.AuthRepository
+import com.eter.undiamas.core.domain.repository.CheckInRepository
+import com.eter.undiamas.core.domain.repository.DiaryRepository
+import com.eter.undiamas.core.domain.repository.MoodRepository
+import com.eter.undiamas.core.domain.repository.PerfilRepository
 import com.eter.undiamas.features.calculadora.domain.SavingsCalculator
 import com.eter.undiamas.features.checkin.domain.CheckInHistory
 import com.eter.undiamas.features.checkin.domain.RiskAssessor
 import com.eter.undiamas.features.diario.domain.DiaryEntry
 import com.eter.undiamas.features.diario.domain.SentimentAnalyzer
 import com.eter.undiamas.features.estadisticas.domain.RiskInsights
-import com.eter.undiamas.features.ia.data.MockAiProvider
+import com.eter.undiamas.features.ia.data.CloudFunctionsAiProvider
 import com.eter.undiamas.features.ia.domain.AiConversationService
 import com.eter.undiamas.features.sobriedad.domain.Milestones
 import com.eter.undiamas.features.sobriedad.domain.SobrietyCounter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -37,13 +55,43 @@ data class AppSettings(
 )
 
 /**
- * Estado en memoria compartido entre pantallas mientras Fase 3 conecta Auth/Firestore.
- * No persiste entre reinicios; se reemplazará por repositorios reales sobre Firebase.
+ * Estado compartido entre pantallas. Perfil, check-ins, diario, animos y mensajes de IA
+ * son un espejo reactivo (Observer/Flow) de Firestore: [start] abre la sesion y suscribe
+ * los listeners; los metodos `register*`/`add*` escriben al repositorio real y dejan que
+ * el propio listener actualice el estado (fuente de verdad unica).
  */
-class AppState(aiProvider: AiProvider = MockAiProvider()) {
+class AppState(
+    private val authRepository: AuthRepository = AuthRepositoryImpl(),
+    private val perfilRepository: PerfilRepository = PerfilRepositoryImpl(),
+    private val checkInRepository: CheckInRepository = CheckInRepositoryImpl(),
+    private val diaryRepository: DiaryRepository = DiaryRepositoryImpl(),
+    private val moodRepository: MoodRepository = MoodRepositoryImpl(),
+    private val aiMessageRepository: AiMessageRepository = AiMessageRepositoryImpl(),
+    aiProvider: AiProvider = CloudFunctionsAiProvider(),
+) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /** uid de la sesion actual (anonima o con correo); null hasta que [start] termine de autenticar. */
+    var uid: String? by mutableStateOf(null)
+        private set
+
+    /** true mientras se autentica y se espera la primera lectura de Firestore. */
+    var isLoading: Boolean by mutableStateOf(true)
+        private set
+
+    /** Error legible de la ultima operacion de login/registro con correo, o null si no hay. */
+    var authError: String? by mutableStateOf(null)
+        private set
+
+    private var profileJob: Job? = null
+    private var checkInsJob: Job? = null
+    private var diaryJob: Job? = null
+    private var moodJob: Job? = null
+    private var aiMessagesJob: Job? = null
+
     var profile: UserProfile by mutableStateOf(
         UserProfile(
-            userId = "demo-user",
+            userId = "",
             displayName = "",
             sobrietyStartDate = Clock.System.now(),
         ),
@@ -71,17 +119,108 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
     val sentimentAnalyzer = SentimentAnalyzer()
     val aiConversationService = AiConversationService(aiProvider)
 
-    private var nextCheckInId = 0
-    private var nextDiaryId = 0
-    private var nextMoodId = 0
-
     /** La pantalla raíz reemplaza esto por una función que muestra un snackbar real. */
     var onNotify: (String) -> Unit = {}
 
     fun notify(message: String) = onNotify(message)
 
+    /** Autentica anonimamente y suscribe perfil + check-ins reales de Firestore. Llamar una sola vez. */
+    fun start() {
+        scope.launch {
+            configureFirebaseEmulatorsIfNeeded()
+            subscribeToUid(authRepository.signInAnonymously())
+        }
+    }
+
+    /**
+     * Vincula la sesion anonima actual (con todos sus datos) a un correo/contraseña.
+     * El uid no cambia, asi que no hace falta resuscribir los listeners de perfil/check-ins.
+     */
+    fun linkAccountWithEmail(email: String, password: String) {
+        scope.launch {
+            runCatching { authRepository.linkAnonymousWithEmail(email, password) }
+                .onSuccess {
+                    authError = null
+                    notify("Cuenta vinculada. Tus datos seguirán contigo si cambias de dispositivo.")
+                }
+                .onFailure { authError = it.message ?: "No se pudo vincular la cuenta." }
+        }
+    }
+
+    /** Inicia sesion con correo/contraseña y migra la sesion a ese uid. */
+    fun signInWithEmail(email: String, password: String) {
+        scope.launch {
+            runCatching { authRepository.signInWithEmail(email, password) }
+                .onSuccess { newUid ->
+                    authError = null
+                    isOnboarded = false
+                    subscribeToUid(newUid)
+                }
+                .onFailure { authError = it.message ?: "No se pudo iniciar sesión." }
+        }
+    }
+
+    /** Cierra la sesion actual y vuelve a abrir una sesion anonima nueva. */
+    fun signOut() {
+        scope.launch {
+            authRepository.signOut()
+            isOnboarded = false
+            subscribeToUid(authRepository.signInAnonymously())
+        }
+    }
+
+    private fun subscribeToUid(newUid: String) {
+        profileJob?.cancel()
+        checkInsJob?.cancel()
+        diaryJob?.cancel()
+        moodJob?.cancel()
+        aiMessagesJob?.cancel()
+        checkIns.clear()
+        diaryEntries.clear()
+        moodEntries.clear()
+        aiMessages.clear()
+        isLoading = true
+        uid = newUid
+        profile = profile.copy(userId = newUid)
+
+        profileJob = scope.launch {
+            perfilRepository.observe(newUid).collect { loaded ->
+                if (loaded != null) {
+                    profile = loaded
+                    isOnboarded = true
+                }
+                isLoading = false
+            }
+        }
+        checkInsJob = scope.launch {
+            checkInRepository.observeRecent(newUid).collect { entries ->
+                checkIns.clear()
+                checkIns.addAll(entries)
+            }
+        }
+        diaryJob = scope.launch {
+            diaryRepository.observeRecent(newUid).collect { entries ->
+                diaryEntries.clear()
+                diaryEntries.addAll(entries)
+            }
+        }
+        moodJob = scope.launch {
+            moodRepository.observeRecent(newUid).collect { entries ->
+                moodEntries.clear()
+                moodEntries.addAll(entries)
+            }
+        }
+        aiMessagesJob = scope.launch {
+            aiMessageRepository.observeRecent(newUid).collect { entries ->
+                aiMessages.clear()
+                aiMessages.addAll(entries)
+            }
+        }
+    }
+
     fun updateProfile(update: (UserProfile) -> UserProfile) {
         profile = update(profile)
+        persistProfile()
     }
 
     fun updateSettings(update: (AppSettings) -> AppSettings) {
@@ -106,43 +245,60 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
             trustedContact = if (contactName.isBlank()) null else TrustedContact(contactName, contactPhone),
         )
         isOnboarded = true
+        persistProfile()
     }
 
+    private fun persistProfile() {
+        val currentUid = uid ?: return
+        scope.launch { perfilRepository.save(currentUid, profile) }
+    }
+
+    /** Escribe el check-in en Firestore; [checkIns] se actualiza solo via el listener de [start]. */
     fun registerCheckIn(entry: CheckInEntry) {
-        checkIns.add(0, entry.copy(id = (nextCheckInId++).toString()))
+        val currentUid = uid ?: return
+        scope.launch { checkInRepository.add(currentUid, entry) }
     }
 
+    /** Escribe la entrada en Firestore; [diaryEntries] se actualiza solo via el listener de [subscribeToUid]. */
     fun addDiaryEntry(entry: DiaryEntry) {
-        diaryEntries.add(0, entry.copy(id = (nextDiaryId++).toString()))
+        val currentUid = uid ?: return
+        scope.launch { diaryRepository.add(currentUid, entry) }
     }
 
+    /** Escribe el animo en Firestore; [moodEntries] se actualiza solo via el listener de [subscribeToUid]. */
     fun registerMood(mood: Mood) {
-        moodEntries.add(
-            0,
-            MoodEntry(
-                id = (nextMoodId++).toString(),
-                userId = profile.userId,
-                mood = mood,
-                registeredAt = Clock.System.now(),
-            ),
-        )
+        val currentUid = uid ?: return
+        val entry = MoodEntry(id = "", userId = currentUid, mood = mood, registeredAt = Clock.System.now())
+        scope.launch { moodRepository.add(currentUid, entry) }
     }
 
-    /** Derecho al olvido: borra todo rastro local y devuelve la app al cuestionario inicial. */
+    /** Escribe el mensaje en Firestore; [aiMessages] se actualiza solo via el listener de [subscribeToUid]. */
+    fun registerAiMessage(message: AiMessage) {
+        val currentUid = uid ?: return
+        scope.launch { aiMessageRepository.add(currentUid, message) }
+    }
+
+    /** Derecho al olvido: borra todos los datos reales del usuario y vuelve al cuestionario inicial. */
     fun purgeAllData() {
-        checkIns.clear()
+        val currentUid = uid
         diaryEntries.clear()
         aiMessages.clear()
         moodEntries.clear()
-        nextCheckInId = 0
-        nextDiaryId = 0
-        nextMoodId = 0
         profile = UserProfile(
-            userId = "demo-user",
+            userId = currentUid.orEmpty(),
             displayName = "",
             sobrietyStartDate = Clock.System.now(),
         )
         settings = AppSettings()
         isOnboarded = false
+        if (currentUid != null) {
+            scope.launch {
+                perfilRepository.delete(currentUid)
+                checkInRepository.deleteAll(currentUid)
+                diaryRepository.deleteAll(currentUid)
+                moodRepository.deleteAll(currentUid)
+                aiMessageRepository.deleteAll(currentUid)
+            }
+        }
     }
 }

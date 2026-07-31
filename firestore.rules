@@ -1,0 +1,43 @@
+rules_version = '2';
+
+// Aislamiento estricto por UID (Fase 3 · 08): ningun usuario puede leer ni escribir
+// datos de otro usuario, ni siquiera el historial de check-ins o las conversaciones con
+// la IA, que son los datos mas sensibles del dominio.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function esDuenio(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /usuarios/{uid} {
+      allow read, write: if esDuenio(uid);
+
+      match /checkins/{checkInId} {
+        allow read, write: if esDuenio(uid);
+
+        match /aiMessages/{aiMessageId} {
+          allow read, write: if esDuenio(uid);
+        }
+      }
+
+      match /alertas/{alertaId} {
+        // Las escribe unicamente la Cloud Function `agentChat` via Admin SDK, que no
+        // pasa por estas reglas. El cliente solo puede leer las suyas.
+        allow read: if esDuenio(uid);
+        allow write: if false;
+      }
+    }
+
+    // Trazabilidad IA (check-in -> nivel de riesgo -> respuesta): solo la Cloud Function
+    // escribe (Admin SDK). Cada usuario lee unicamente sus propias entradas.
+    match /logs_ia/{logId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

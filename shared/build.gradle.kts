@@ -25,7 +25,7 @@ kotlin {
        minSdk = libs.versions.android.minSdk.get().toInt()
     
        compilerOptions {
-           jvmTarget = JvmTarget.JVM_11
+           jvmTarget = JvmTarget.JVM_17
        }
        androidResources {
            enable = true
@@ -57,6 +57,20 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.firebase.app)
+            implementation(libs.firebase.auth)
+            implementation(libs.firebase.firestore)
+            implementation(libs.firebase.functions)
+        }
+        androidMain.dependencies {
+            // Las dependencias GitLive Firebase-android (arriba, en commonMain) requieren
+            // estas versiones explicitas: piden com.google.firebase:* sin version fija,
+            // resuelta normalmente via el Firebase BOM, que este AGP KMP library plugin
+            // no propaga bien a todas las configuraciones (host test, device test, etc.).
+            implementation(libs.firebase.android.common)
+            implementation(libs.firebase.android.auth)
+            implementation(libs.firebase.android.firestore)
+            implementation(libs.firebase.android.functions)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
