@@ -37,6 +37,7 @@ import com.eter.undiamas.core.presentation.theme.AccentDiario
 import com.eter.undiamas.core.presentation.theme.RiskGreen
 import com.eter.undiamas.core.presentation.theme.RiskRed
 import com.eter.undiamas.core.presentation.theme.RiskYellow
+import com.eter.undiamas.core.presentation.closeApp
 
 @Composable
 fun ConfiguracionScreen(state: AppState) {
@@ -128,6 +129,17 @@ fun ConfiguracionScreen(state: AppState) {
             Text(
                 "El modo camuflaje oculta los textos sensibles dentro de la app. Cambiar el icono " +
                     "del lanzador requiere configuración adicional de Android que aún no está integrada.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            // Salida inmediata: cierra la app y la quita de la lista de recientes.
+            OutlinedButton(onClick = { closeApp() }, modifier = Modifier.fillMaxWidth()) {
+                Text("Cerrar la app ahora")
+            }
+            Text(
+                "Sale al instante y quita la app de las aplicaciones recientes. Tus datos " +
+                    "quedan intactos.",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
