@@ -41,6 +41,10 @@ import com.eter.undiamas.features.onboarding.presentation.OnboardingScreen
 import com.eter.undiamas.features.perfil.presentation.PerfilScreen
 import com.eter.undiamas.features.sobriedad.presentation.SobrietyScreen
 import kotlinx.coroutines.launch
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 
 private val bottomTabs = listOf(
     Screen.Inicio to "🏠",
@@ -62,6 +66,31 @@ fun App() {
     LaunchedEffect(Unit) { state.start() }
 
     UnDiaMasTheme(darkTheme = state.settings.darkTheme) {
+        // Un fallo de conexion no debe dejar la app en blanco ni tumbarla: se explica y se reintenta.
+        state.startupError?.let { error ->
+            Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text("No pudimos conectar", style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        "Revisa tu conexión a internet e inténtalo de nuevo.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        error,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                    Button(onClick = { state.retryStart() }) { Text("Reintentar") }
+                }
+            }
+            return@UnDiaMasTheme
+        }
+
         if (state.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()

@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Sin INTERNET, Auth/Firestore/Functions fallan y el arranque no puede completarse. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <!-- Visibilidad de la app de teléfono para el protocolo de emergencia (Android 11+). -->
     <queries>
         <intent>

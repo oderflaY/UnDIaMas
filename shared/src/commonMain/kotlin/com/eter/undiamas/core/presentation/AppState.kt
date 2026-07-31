@@ -83,6 +83,10 @@ class AppState(
     var authError: String? by mutableStateOf(null)
         private set
 
+    /** Fallo al arrancar la sesion (sin red, Firebase mal configurado). null si todo fue bien. */
+    var startupError: String? by mutableStateOf(null)
+        private set
+
     private var profileJob: Job? = null
     private var checkInsJob: Job? = null
     private var diaryJob: Job? = null
@@ -127,9 +131,27 @@ class AppState(
     /** Autentica anonimamente y suscribe perfil + check-ins reales de Firestore. Llamar una sola vez. */
     fun start() {
         scope.launch {
-            configureFirebaseEmulatorsIfNeeded()
-            subscribeToUid(authRepository.signInAnonymously())
+            startupError = null
+            // Sin runCatching, cualquier fallo de red o de configuracion de Firebase se
+            // propaga como excepcion no capturada y tumba la app al abrirla. En una app de
+            // recuperacion eso es inaceptable: es preferible entrar en modo degradado y
+            // ofrecer reintentar.
+            runCatching {
+                configureFirebaseEmulatorsIfNeeded()
+                authRepository.signInAnonymously()
+            }.onSuccess { newUid ->
+                subscribeToUid(newUid)
+            }.onFailure { error ->
+                startupError = error.message ?: "No se pudo conectar con el servidor."
+                isLoading = false
+            }
         }
+    }
+
+    /** Reintento manual del arranque tras un fallo de conexion. */
+    fun retryStart() {
+        isLoading = true
+        start()
     }
 
     /**
