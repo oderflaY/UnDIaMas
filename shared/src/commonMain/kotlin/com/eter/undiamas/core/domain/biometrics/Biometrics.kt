@@ -33,16 +33,28 @@ private val analysisJson = Json {
     encodeDefaults = true
 }
 
-/** Lo que consume el algoritmo: la foto cruda más los picos de FC ya resaltados. */
+/**
+ * Lo que consume el algoritmo: la foto cruda, los picos relativos a la línea base del día
+ * y los episodios que cruzaron el umbral absoluto de abstinencia.
+ */
 @Serializable
 data class AnalysisPayload(
     val snapshot: BiometricsSnapshot,
     val heartRateSpikes: List<HeartRateSpike>,
+    val withdrawalAlerts: List<WithdrawalAlert>,
+    /** Umbral vigente, para que el análisis sepa contra qué se compararon las lecturas. */
+    val withdrawalThresholdBpm: Long = WITHDRAWAL_BPM_THRESHOLD,
 )
 
 /** Serializa la foto con kotlinx.serialization, que ya es la librería JSON del proyecto. */
 fun BiometricsSnapshot.toAnalysisJson(): String =
-    analysisJson.encodeToString(AnalysisPayload(this, SpikeDetector().detect(heartRate)))
+    analysisJson.encodeToString(
+        AnalysisPayload(
+            snapshot = this,
+            heartRateSpikes = SpikeDetector().detect(heartRate),
+            withdrawalAlerts = WithdrawalAlertDetector().detect(heartRate),
+        ),
+    )
 
 /**
  * Punto de entrada de una sola llamada para el algoritmo: lectura de 24 h → JSON listo,

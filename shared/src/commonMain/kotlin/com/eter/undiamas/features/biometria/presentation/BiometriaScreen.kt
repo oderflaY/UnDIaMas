@@ -57,6 +57,10 @@ import kotlinx.coroutines.delay
 import com.eter.undiamas.core.presentation.rememberNow
 import com.eter.undiamas.core.presentation.theme.RiskYellow
 import com.eter.undiamas.core.domain.biometrics.SpikeDetector
+import com.eter.undiamas.core.domain.biometrics.WITHDRAWAL_BPM_THRESHOLD
+import com.eter.undiamas.core.domain.biometrics.WithdrawalAlertDetector
+import com.eter.undiamas.core.presentation.Navigator
+import com.eter.undiamas.core.presentation.Screen
 
 private sealed interface UiState {
     data object Loading : UiState
@@ -73,11 +77,13 @@ private sealed interface UiState {
 private const val REFRESH_INTERVAL_MILLIS = 60_000L
 
 @Composable
-fun BiometriaScreen(state: AppState) {
+fun BiometriaScreen(state: AppState, navigator: Navigator) {
     val provider = state.biometricsProvider
     var ui by remember { mutableStateOf<UiState>(UiState.Loading) }
     var lastUpdated by remember { mutableStateOf<Instant?>(null) }
     var showJson by remember { mutableStateOf(false) }
+    // Inicio del episodio del que ya se avisó, para no repetir el aviso en cada refresco.
+    var avisadoEn by remember { mutableStateOf<Long?>(null) }
     val scope = rememberCoroutineScope()
 
     /**
@@ -95,6 +101,22 @@ fun BiometriaScreen(state: AppState) {
             is BiometricsResult.Ready -> {
                 ui = UiState.Ready(result.snapshot)
                 lastUpdated = Clock.System.now()
+
+                // Solo se avisa si el pulso sigue alto AHORA y no se avisó ya de este
+                // mismo episodio: repetir el aviso cada minuto acabaría por anularlo.
+                val detector = WithdrawalAlertDetector()
+                val episodioActivo = detector.isActive(result.snapshot.heartRate)
+                val ultimoEpisodio = detector.detect(result.snapshot.heartRate).lastOrNull()
+                if (episodioActivo && ultimoEpisodio != null &&
+                    ultimoEpisodio.startEpochSeconds != avisadoEn
+                ) {
+                    avisadoEn = ultimoEpisodio.startEpochSeconds
+                    state.notify(
+                        "Tu pulso está en ${ultimoEpisodio.peakBpm} bpm. " +
+                            "Puede ser un momento de abstinencia: respira, no estás solo.",
+                    )
+                }
+                if (!episodioActivo) avisadoEn = null
             }
             // Si revocaron el permiso a media sesión sí hay que decirlo, aun en silencio.
             BiometricsResult.PermissionsRequired -> ui = UiState.NeedsPermissions
@@ -169,6 +191,7 @@ fun BiometriaScreen(state: AppState) {
             }
 
             is UiState.Ready -> {
+                WithdrawalAlertCard(current.snapshot, navigator)
                 SnapshotContent(current.snapshot, showJson, onToggleJson = { showJson = !showJson })
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
@@ -312,5 +335,57 @@ private fun HeartRateSparkline(samples: List<Long>, modifier: Modifier = Modifie
         }
         drawPath(fill, brush = Brush.verticalGradient(listOf(accent.copy(alpha = 0.25f), Color.Transparent)))
         drawPath(path, color = accent, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
+    }
+}
+
+/**
+ * Aviso de posible episodio de abstinencia por frecuencia cardíaca.
+ *
+ * Se distingue entre "está pasando ahora" y "pasó hoy": el primero ofrece salida
+ * inmediata a Urge Surfing, el segundo solo informa. Un aviso que exige acción cuando ya
+ * pasó el momento genera culpa por algo que la persona ya superó.
+ *
+ * El tono es deliberadamente sin alarma ni juicio: un pulso alto tiene mil causas
+ * inocentes, y tratar cada una como una emergencia enseñaría a ignorar el aviso.
+ */
+@Composable
+private fun WithdrawalAlertCard(snapshot: BiometricsSnapshot, navigator: Navigator) {
+    val detector = remember { WithdrawalAlertDetector() }
+    val episodios = remember(snapshot) { detector.detect(snapshot.heartRate) }
+    if (episodios.isEmpty()) return
+
+    val activo = remember(snapshot) { detector.isActive(snapshot.heartRate) }
+    val ultimo = episodios.last()
+    val accent = if (activo) EmergencyCoralStart else RiskYellow
+
+    SectionCard {
+        SectionHeader(
+            AppIcons.Alerta,
+            if (activo) "Tu pulso está alto ahora" else "Hubo pulso alto hoy",
+            accent,
+        )
+        Text(
+            if (activo) {
+                "Llevas ${ultimo.peakBpm} bpm, por encima de $WITHDRAWAL_BPM_THRESHOLD. " +
+                    "Puede ser abstinencia, o puede ser que acabas de moverte. " +
+                    "Si notas ansiedad, esto ayuda a que pase."
+            } else {
+                "Tu pulso pasó de $WITHDRAWAL_BPM_THRESHOLD bpm en " +
+                    "${episodios.size} ${if (episodios.size == 1) "momento" else "momentos"} " +
+                    "de las últimas 24 h, con un máximo de ${ultimo.peakBpm} bpm. " +
+                    "Lo apuntamos por si te sirve reconocer tus horas difíciles."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (activo) {
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = accent),
+                onClick = { navigator.goTo(Screen.UrgeSurfing) },
+            ) {
+                Icon(AppIcons.Escudo, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text("  Acompáñame ahora")
+            }
+        }
     }
 }

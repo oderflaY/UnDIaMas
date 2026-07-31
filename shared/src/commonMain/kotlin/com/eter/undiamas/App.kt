@@ -210,7 +210,7 @@ fun App(
                         Screen.Capsulas -> CapsulasScreen(state)
                         Screen.Habitos -> HabitosScreen(state)
                         Screen.Anclas -> AnclasScreen(state)
-                        Screen.Biometria -> BiometriaScreen(state)
+                        Screen.Biometria -> BiometriaScreen(state, navigator)
                         Screen.Perfil -> PerfilScreen(state, navigator)
                         Screen.Configuracion -> ConfiguracionScreen(state)
                     }
