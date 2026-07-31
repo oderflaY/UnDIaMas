@@ -1,58 +1,115 @@
 rules_version = '2';
 
-// Aislamiento estricto por UID (Fase 3 · 08): ningun usuario puede leer ni escribir
-// datos de otro usuario, ni siquiera el historial de check-ins o las conversaciones con
-// la IA, que son los datos mas sensibles del dominio.
+// Modelo de acceso de UnDiaMas.
+//
+// Base: cada paciente solo ve lo suyo. Excepcion: las cuentas con role == "therapist"
+// pueden LEER los datos clinicos de los pacientes (decision explicita del proyecto), pero
+// nunca escribirlos: el historial de una persona en recuperacion lo escribe ella.
+//
+// Punto critico: el rol vive en /users. Si un paciente pudiera escribir su propio campo
+// `role`, se ascenderia a terapeuta y leeria los historiales de todos. Por eso escribir
+// `role` esta prohibido desde el cliente en TODOS los casos: lo asigna un administrador
+// o una Cloud Function con Admin SDK, que no pasa por estas reglas.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function esDuenio(uid) {
-      return request.auth != null && request.auth.uid == uid;
+    function autenticado() {
+      return request.auth != null;
     }
 
-    match /usuarios/{uid} {
-      allow read, write: if esDuenio(uid);
-
-      match /checkins/{checkInId} {
-        allow read, write: if esDuenio(uid);
-
-        match /aiMessages/{aiMessageId} {
-          allow read, write: if esDuenio(uid);
-        }
-      }
-
-      // Entradas del diario personal. Sin esta regla el catch-all de abajo las deniega
-      // y la pantalla de diario falla con PERMISSION_DENIED.
-      match /diario/{entradaId} {
-        allow read, write: if esDuenio(uid);
-      }
-
-      // Registros rapidos de animo desde la pantalla de inicio.
-      match /animos/{animoId} {
-        allow read, write: if esDuenio(uid);
-      }
-
-      // Conversacion con el asistente. Vive al nivel del usuario y no anidada bajo un
-      // check-in, porque es un hilo continuo y no un anexo de una respuesta concreta.
-      match /mensajesIA/{mensajeId} {
-        allow read, write: if esDuenio(uid);
-      }
-
-      match /alertas/{alertaId} {
-        // Las escribe unicamente la Cloud Function `agentChat` via Admin SDK, que no
-        // pasa por estas reglas. El cliente solo puede leer las suyas.
-        allow read: if esDuenio(uid);
-        allow write: if false;
-      }
+    function esDuenio(userId) {
+      return autenticado() && request.auth.uid == userId;
     }
 
-    // Trazabilidad IA (check-in -> nivel de riesgo -> respuesta): solo la Cloud Function
-    // escribe (Admin SDK). Cada usuario lee unicamente sus propias entradas.
-    match /logs_ia/{logId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+    // Lee el rol desde el documento del propio solicitante. Cuesta una lectura por
+    // evaluacion; con volumen conviene migrar a custom claims en el token.
+    function esTerapeuta() {
+      return autenticado()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'therapist';
+    }
+
+    // El paciente ve lo suyo; el terapeuta puede leer (nunca escribir) lo de otros.
+    function puedeLeerDe(userId) {
+      return esDuenio(userId) || esTerapeuta();
+    }
+
+    // Impide que el cliente se asigne o cambie el rol a si mismo.
+    function noTocaRol() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+    }
+    function noTraeRolNuevo() {
+      return !request.resource.data.keys().hasAny(['role'])
+        || request.resource.data.role == 'patient';
+    }
+
+    match /users/{userId} {
+      allow read: if esDuenio(userId) || esTerapeuta();
+      // Al crear, solo puede nacer como paciente. Al actualizar, no puede tocar `role`.
+      allow create: if esDuenio(userId) && noTraeRolNuevo();
+      allow update: if esDuenio(userId) && noTocaRol();
+      allow delete: if esDuenio(userId);
+    }
+
+    match /sobriety_trackers/{userId} {
+      allow read: if puedeLeerDe(userId);
+      allow write: if esDuenio(userId);
+    }
+
+    // Colecciones planas donde el aislamiento sale del campo `userId` y no de la ruta.
+    // Por eso toda consulta del cliente DEBE filtrar por userId: sin ese filtro Firestore
+    // rechaza la consulta entera aunque el usuario tenga documentos propios.
+    match /traffic_light_logs/{logId} {
+      allow read: if autenticado()
+        && (esTerapeuta() || resource.data.userId == request.auth.uid);
+      allow create: if autenticado() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if autenticado() && resource.data.userId == request.auth.uid;
+    }
+
+    match /check_ins/{checkInId} {
+      allow read: if autenticado()
+        && (esTerapeuta() || resource.data.userId == request.auth.uid);
+      allow create: if autenticado() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if autenticado() && resource.data.userId == request.auth.uid;
+    }
+
+    match /relapse_events/{eventId} {
+      allow read: if autenticado()
+        && (esTerapeuta() || resource.data.userId == request.auth.uid);
+      allow create: if autenticado() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if autenticado() && resource.data.userId == request.auth.uid;
+    }
+
+    match /sobriety_logs/{logId} {
+      allow read: if autenticado()
+        && (esTerapeuta() || resource.data.userId == request.auth.uid);
+      allow create: if autenticado() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if autenticado() && resource.data.userId == request.auth.uid;
+    }
+
+    // Sesiones: las ve el paciente implicado y su terapeuta; solo el terapeuta las gestiona.
+    match /sessions/{sessionId} {
+      allow read: if autenticado()
+        && (resource.data.patientId == request.auth.uid || esTerapeuta());
+      allow write: if esTerapeuta();
+    }
+
+    // Notas clinicas: las escribe unicamente el terapeuta. El paciente puede leer las
+    // suyas, que es lo correcto en un expediente sobre su propia persona.
+    match /clinical_notes/{noteId} {
+      allow read: if autenticado()
+        && (resource.data.patientId == request.auth.uid || esTerapeuta());
+      allow write: if esTerapeuta();
+    }
+
+    // Trazabilidad de la IA: la escribe solo la Cloud Function (Admin SDK).
+    match /ai_logs/{logId} {
+      allow read: if autenticado()
+        && (esTerapeuta() || resource.data.userId == request.auth.uid);
       allow write: if false;
     }
 
+    // Todo lo no declarado queda cerrado.
     match /{document=**} {
       allow read, write: if false;
     }
