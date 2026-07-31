@@ -11,7 +11,14 @@ import com.eter.undiamas.core.domain.model.Mood
 import com.eter.undiamas.core.domain.model.MoodEntry
 import com.eter.undiamas.core.domain.model.TrustedContact
 import com.eter.undiamas.core.domain.model.UserProfile
+import com.eter.undiamas.features.anclas.domain.Anchor
+import com.eter.undiamas.features.anclas.domain.AnchorKind
 import com.eter.undiamas.features.calculadora.domain.SavingsCalculator
+import com.eter.undiamas.features.capsulas.domain.TimeCapsule
+import com.eter.undiamas.features.capsulas.domain.TimeCapsuleVault
+import com.eter.undiamas.features.habitos.domain.Habit
+import com.eter.undiamas.features.habitos.domain.HabitCompletion
+import com.eter.undiamas.features.habitos.domain.HabitTracker
 import com.eter.undiamas.features.checkin.domain.CheckInHistory
 import com.eter.undiamas.features.checkin.domain.RiskAssessor
 import com.eter.undiamas.features.diario.domain.DiaryEntry
@@ -22,6 +29,7 @@ import com.eter.undiamas.features.ia.data.MockAiProvider
 import com.eter.undiamas.features.ia.domain.AiConversationService
 import com.eter.undiamas.features.sobriedad.domain.Milestones
 import com.eter.undiamas.features.sobriedad.domain.SobrietyCounter
+import kotlinx.datetime.LocalDate
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -62,6 +70,10 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
     val diaryEntries = mutableStateListOf<DiaryEntry>()
     val aiMessages = mutableStateListOf<AiMessage>()
     val moodEntries = mutableStateListOf<MoodEntry>()
+    val capsules = mutableStateListOf<TimeCapsule>()
+    val habits = mutableStateListOf<Habit>()
+    val habitCompletions = mutableStateListOf<HabitCompletion>()
+    val anchors = mutableStateListOf<Anchor>()
 
     val sobrietyCounter = SobrietyCounter()
     val savingsCalculator = SavingsCalculator()
@@ -69,6 +81,8 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
     val checkInHistory = CheckInHistory()
     val riskInsights = RiskInsights()
     val riskPatternDetector = RiskPatternDetector()
+    val capsuleVault = TimeCapsuleVault()
+    val habitTracker = HabitTracker()
     val milestones = Milestones()
     val sentimentAnalyzer = SentimentAnalyzer()
     val aiConversationService = AiConversationService(aiProvider)
@@ -80,6 +94,9 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
     private var nextCheckInId = 0
     private var nextDiaryId = 0
     private var nextMoodId = 0
+    private var nextCapsuleId = 0
+    private var nextHabitId = 0
+    private var nextAnchorId = 0
 
     /** La pantalla raíz reemplaza esto por una función que muestra un snackbar real. */
     var onNotify: (String) -> Unit = {}
@@ -122,6 +139,54 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
         diaryEntries.add(0, entry.copy(id = (nextDiaryId++).toString()))
     }
 
+    fun addCapsule(title: String, message: String, createdOn: LocalDate, unlockOn: LocalDate) {
+        capsules.add(
+            0,
+            TimeCapsule(
+                id = (nextCapsuleId++).toString(),
+                userId = profile.userId,
+                title = title,
+                message = message,
+                createdOn = createdOn,
+                unlockOn = unlockOn,
+            ),
+        )
+    }
+
+    fun addHabit(name: String) {
+        habits.add(Habit(id = (nextHabitId++).toString(), userId = profile.userId, name = name))
+    }
+
+    fun removeHabit(habitId: String) {
+        habits.removeAll { it.id == habitId }
+        habitCompletions.removeAll { it.habitId == habitId }
+    }
+
+    /** Alterna el cumplimiento de un hábito ese día, sin duplicar registros. */
+    fun toggleHabit(habitId: String, date: LocalDate) {
+        val existing = habitCompletions.firstOrNull { it.habitId == habitId && it.date == date }
+        if (existing != null) habitCompletions.remove(existing) else habitCompletions.add(HabitCompletion(habitId, date))
+    }
+
+    fun addAnchor(title: String, note: String, kind: AnchorKind) {
+        val id = nextAnchorId++
+        anchors.add(
+            0,
+            Anchor(
+                id = id.toString(),
+                userId = profile.userId,
+                title = title,
+                note = note,
+                kind = kind,
+                tileSeed = id,
+            ),
+        )
+    }
+
+    fun removeAnchor(anchorId: String) {
+        anchors.removeAll { it.id == anchorId }
+    }
+
     fun registerUrgeOvercome() {
         urgeSessionsCompleted += 1
     }
@@ -144,7 +209,14 @@ class AppState(aiProvider: AiProvider = MockAiProvider()) {
         diaryEntries.clear()
         aiMessages.clear()
         moodEntries.clear()
+        capsules.clear()
+        habits.clear()
+        habitCompletions.clear()
+        anchors.clear()
         urgeSessionsCompleted = 0
+        nextCapsuleId = 0
+        nextHabitId = 0
+        nextAnchorId = 0
         nextCheckInId = 0
         nextDiaryId = 0
         nextMoodId = 0

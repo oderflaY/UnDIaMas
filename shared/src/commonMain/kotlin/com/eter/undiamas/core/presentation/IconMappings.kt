@@ -6,6 +6,7 @@ import com.eter.undiamas.core.domain.model.RiskLevel
 import com.eter.undiamas.core.domain.model.SupportRole
 import com.eter.undiamas.core.domain.model.Trigger
 import com.eter.undiamas.core.presentation.theme.AppIcons
+import com.eter.undiamas.features.anclas.domain.AnchorKind
 import com.eter.undiamas.features.diario.domain.Sentiment
 
 /**
@@ -45,6 +46,15 @@ val SupportRole.icon: ImageVector
         SupportRole.TERAPEUTA -> AppIcons.RolTerapeuta
         SupportRole.FAMILIAR -> AppIcons.RolFamiliar
         SupportRole.AMISTAD -> AppIcons.RolAmistad
+    }
+
+val AnchorKind.icon: ImageVector
+    get() = when (this) {
+        AnchorKind.PERSONA -> AppIcons.AnclaPersona
+        AnchorKind.MASCOTA -> AppIcons.AnclaMascota
+        AnchorKind.META -> AppIcons.AnclaMeta
+        AnchorKind.LUGAR -> AppIcons.AnclaLugar
+        AnchorKind.RECUERDO -> AppIcons.AnclaRecuerdo
     }
 
 val Sentiment.icon: ImageVector

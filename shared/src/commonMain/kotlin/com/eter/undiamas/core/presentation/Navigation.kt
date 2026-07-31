@@ -14,6 +14,9 @@ enum class Screen(val label: String) {
     Calculadora("Ahorro"),
     Emergencia("Emergencia"),
     UrgeSurfing("Sostener el impulso"),
+    Capsulas("Cápsulas"),
+    Habitos("Hábitos"),
+    Anclas("Anclas"),
     Perfil("Perfil"),
     Configuracion("Configuración"),
 }

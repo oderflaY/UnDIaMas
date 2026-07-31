@@ -3,6 +3,12 @@ package com.eter.undiamas.core.presentation.theme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.Anchor
+import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.Pets
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.Place
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -140,6 +146,19 @@ object AppIcons {
     val Oir: ImageVector = Icons.Rounded.Hearing
     val Oler: ImageVector = Icons.Rounded.Air
     val Saborear: ImageVector = Icons.Rounded.Restaurant
+
+    // Secciones nuevas
+    val Capsula: ImageVector = Icons.Rounded.Inventory2
+    val Habitos: ImageVector = Icons.Rounded.Spa
+    val Ancla: ImageVector = Icons.Rounded.Anchor
+    val CheckInVacio: ImageVector = Icons.Rounded.RadioButtonUnchecked
+
+    // Tipos de ancla
+    val AnclaPersona: ImageVector = Icons.Rounded.Favorite
+    val AnclaMascota: ImageVector = Icons.Rounded.Pets
+    val AnclaMeta: ImageVector = Icons.Rounded.Flag
+    val AnclaLugar: ImageVector = Icons.Rounded.Place
+    val AnclaRecuerdo: ImageVector = Icons.Rounded.PhotoCamera
 
     // Detonantes
     val Estres: ImageVector = Icons.Rounded.Warning

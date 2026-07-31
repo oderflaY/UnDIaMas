@@ -46,6 +46,7 @@ import com.eter.undiamas.core.presentation.components.BilateralFocus
 import com.eter.undiamas.core.presentation.components.BreathingCircle
 import com.eter.undiamas.core.presentation.components.BubblePopGame
 import com.eter.undiamas.core.presentation.components.CountdownRing
+import com.eter.undiamas.core.presentation.components.GuardedBack
 import com.eter.undiamas.core.presentation.components.pressable
 import com.eter.undiamas.core.presentation.theme.AccentAsistente
 import com.eter.undiamas.core.presentation.theme.AppIcons
@@ -118,6 +119,17 @@ fun UrgeSurfingScreen(state: AppState, navigator: Navigator) {
             state.notify("Lo sostuviste. El pico pasó y sigues aquí.")
         }
     }
+
+    // Salir a media crisis es justo lo que no debe pasar por accidente.
+    GuardedBack(
+        enabled = !complete,
+        title = "El impulso dura unos 15 minutos",
+        message = "Vas en ${formatCountdown(session.remainingSeconds(elapsed))}. " +
+            "Sostente un poco más; salir ahora es cuando más cuesta.",
+        confirmLabel = "Salir de todas formas",
+        dismissLabel = "Me quedo",
+        onConfirmExit = { navigator.back() },
+    )
 
     Column(
         modifier = Modifier

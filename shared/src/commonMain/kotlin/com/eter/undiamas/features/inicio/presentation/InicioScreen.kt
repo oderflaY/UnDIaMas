@@ -59,6 +59,8 @@ import kotlinx.datetime.toLocalDateTime
 import com.eter.undiamas.features.estadisticas.domain.spanishName
 import com.eter.undiamas.core.presentation.theme.RiskYellow
 import com.eter.undiamas.core.presentation.components.EvolvingCompanion
+import com.eter.undiamas.core.presentation.theme.PrimaryVioletStart
+import com.eter.undiamas.core.presentation.theme.AccentPerfil
 
 @Composable
 fun InicioScreen(state: AppState, navigator: Navigator) {
@@ -302,6 +304,44 @@ fun InicioScreen(state: AppState, navigator: Navigator) {
                     "Asistente",
                     AccentAsistente,
                     { navigator.goTo(Screen.Ia) },
+                    Modifier.weight(1f),
+                )
+            }
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                ActionTile(
+                    AppIcons.Habitos,
+                    "Hábitos",
+                    RiskGreen,
+                    { navigator.goTo(Screen.Habitos) },
+                    Modifier.weight(1f),
+                )
+                ActionTile(
+                    AppIcons.Ancla,
+                    "Mis anclas",
+                    AccentPerfil,
+                    { navigator.goTo(Screen.Anclas) },
+                    Modifier.weight(1f),
+                )
+            }
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                ActionTile(
+                    AppIcons.Capsula,
+                    "Cápsulas",
+                    PrimaryVioletStart,
+                    { navigator.goTo(Screen.Capsulas) },
+                    Modifier.weight(1f),
+                )
+                ActionTile(
+                    AppIcons.Record,
+                    "Mi racha",
+                    SavingsGoldEnd,
+                    { navigator.goTo(Screen.Sobriedad) },
                     Modifier.weight(1f),
                 )
             }

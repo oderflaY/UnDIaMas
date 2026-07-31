@@ -31,7 +31,10 @@ import com.eter.undiamas.features.calculadora.presentation.CalculadoraScreen
 import com.eter.undiamas.features.checkin.presentation.CheckInScreen
 import com.eter.undiamas.features.configuracion.presentation.ConfiguracionScreen
 import com.eter.undiamas.features.diario.presentation.DiarioScreen
+import com.eter.undiamas.features.anclas.presentation.AnclasScreen
+import com.eter.undiamas.features.capsulas.presentation.CapsulasScreen
 import com.eter.undiamas.features.emergencia.presentation.EmergenciaScreen
+import com.eter.undiamas.features.habitos.presentation.HabitosScreen
 import com.eter.undiamas.features.emergencia.presentation.UrgeSurfingScreen
 import com.eter.undiamas.features.estadisticas.presentation.EstadisticasScreen
 import com.eter.undiamas.features.ia.presentation.IaScreen
@@ -126,6 +129,9 @@ fun App() {
                         Screen.Calculadora -> CalculadoraScreen(state)
                         Screen.Emergencia -> EmergenciaScreen(state, navigator)
                         Screen.UrgeSurfing -> UrgeSurfingScreen(state, navigator)
+                        Screen.Capsulas -> CapsulasScreen(state)
+                        Screen.Habitos -> HabitosScreen(state)
+                        Screen.Anclas -> AnclasScreen(state)
                         Screen.Perfil -> PerfilScreen(state, navigator)
                         Screen.Configuracion -> ConfiguracionScreen(state)
                     }
