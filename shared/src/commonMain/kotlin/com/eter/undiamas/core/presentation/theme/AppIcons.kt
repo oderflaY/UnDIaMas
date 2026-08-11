@@ -38,6 +38,13 @@ import androidx.compose.material.icons.rounded.Flight
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.HealthAndSafety
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Healing
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Email
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.FormatQuote
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Hearing
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.Lock
@@ -185,6 +192,17 @@ object AppIcons {
     val AdiccionPantallas: ImageVector = Icons.Rounded.Smartphone
     val AdiccionCompras: ImageVector = Icons.Rounded.ShoppingBag
     val AdiccionOtra: ImageVector = Icons.Rounded.HelpOutline
+    val AdiccionAutolesiones: ImageVector = Icons.Rounded.Healing
+    val AdiccionAnsiedad: ImageVector = Icons.Rounded.Psychology
+
+    // Splash y perfil
+    val Sol: ImageVector = Icons.Rounded.WbSunny
+    val Editar: ImageVector = Icons.Rounded.Edit
+    val Guardar: ImageVector = Icons.Rounded.Save
+    val Correo: ImageVector = Icons.Rounded.Email
+    val Usuario: ImageVector = Icons.Rounded.Person
+    val Frase: ImageVector = Icons.Rounded.FormatQuote
+    val Hecho: ImageVector = Icons.Rounded.Check
 
     // Detonantes
     val Estres: ImageVector = Icons.Rounded.Warning

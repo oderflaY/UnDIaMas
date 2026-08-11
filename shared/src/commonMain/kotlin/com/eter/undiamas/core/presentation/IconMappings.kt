@@ -68,6 +68,8 @@ val AddictionType.icon: ImageVector
         AddictionType.JUEGO -> AppIcons.AdiccionJuego
         AddictionType.PANTALLAS -> AppIcons.AdiccionPantallas
         AddictionType.COMPRAS -> AppIcons.AdiccionCompras
+        AddictionType.AUTOLESIONES -> AppIcons.AdiccionAutolesiones
+        AddictionType.ANSIEDAD -> AppIcons.AdiccionAnsiedad
         AddictionType.OTRA -> AppIcons.AdiccionOtra
     }
 

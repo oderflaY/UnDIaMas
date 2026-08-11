@@ -1,6 +1,7 @@
 package com.eter.undiamas
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -28,11 +29,17 @@ import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.Navigator
 import com.eter.undiamas.core.presentation.Screen
+import com.eter.undiamas.core.presentation.ThemeMode
 import com.eter.undiamas.core.presentation.theme.AppIcons
 import com.eter.undiamas.core.presentation.theme.UnDiaMasTheme
 import com.eter.undiamas.core.presentation.theme.screenTransition
+import com.eter.undiamas.features.auth.presentation.AuthScreen
+import com.eter.undiamas.features.avisos.domain.Notificador
+import com.eter.undiamas.features.avisos.domain.NotificadorInactivo
 import com.eter.undiamas.features.calculadora.presentation.CalculadoraScreen
 import com.eter.undiamas.features.checkin.presentation.CheckInScreen
+import com.eter.undiamas.features.comunidad.presentation.ComunidadScreen
+import com.eter.undiamas.features.comunidad.presentation.PublicarHistoriaScreen
 import com.eter.undiamas.features.configuracion.presentation.ConfiguracionScreen
 import com.eter.undiamas.features.diario.presentation.DiarioScreen
 import com.eter.undiamas.features.anclas.presentation.AnclasScreen
@@ -42,15 +49,19 @@ import com.eter.undiamas.features.habitos.presentation.HabitosScreen
 import com.eter.undiamas.features.emergencia.presentation.UrgeSurfingScreen
 import com.eter.undiamas.features.estadisticas.presentation.EstadisticasScreen
 import com.eter.undiamas.features.ia.presentation.IaScreen
-import com.eter.undiamas.features.inicio.presentation.InicioScreen
+import com.eter.undiamas.features.inicio.presentation.DashboardScreen
 import com.eter.undiamas.features.onboarding.presentation.OnboardingScreen
+import com.eter.undiamas.features.onboarding.presentation.IntroSlides
+import com.eter.undiamas.features.perfil.presentation.EditarPerfilScreen
 import com.eter.undiamas.features.perfil.presentation.PerfilScreen
+import com.eter.undiamas.features.splash.presentation.SplashScreen
 import com.eter.undiamas.features.sobriedad.presentation.SobrietyScreen
 import kotlinx.coroutines.launch
 import com.eter.undiamas.features.biometria.presentation.BiometriaScreen
 import com.eter.undiamas.core.domain.biometrics.BiometricsProvider
 import kotlinx.coroutines.flow.first
 import com.eter.undiamas.core.data.UserPreferences
+import com.eter.undiamas.core.data.api.ApiConfig
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -58,8 +69,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.Button
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
+import com.eter.undiamas.core.presentation.components.SyncBanner
 import com.eter.undiamas.core.presentation.diagnoseStartupError
 
+/** Las cinco secciones de siempre: inicio, check-in, diario, estadísticas y perfil. */
 private val bottomTabs = listOf(
     Screen.Inicio to AppIcons.Inicio,
     Screen.CheckIn to AppIcons.CheckIn,
@@ -73,14 +86,29 @@ private val bottomTabs = listOf(
 fun App(
     biometrics: BiometricsProvider? = null,
     preferences: UserPreferences? = null,
+    notificador: Notificador = NotificadorInactivo(),
 ) {
-    val state = remember { AppState(biometricsProvider = biometrics, preferences = preferences) }
+    val state = remember {
+        AppState(
+            biometricsProvider = biometrics,
+            preferences = preferences,
+            notificador = notificador,
+        )
+    }
     var restored by remember { mutableStateOf(preferences == null) }
+    var splashListo by remember { mutableStateOf(false) }
+    var introVista by remember { mutableStateOf(false) }
 
     // Restaura la sesión previa antes de decidir si mostrar el cuestionario inicial;
     // sin esta espera se vería el onboarding un instante aunque ya estuviera completo.
     LaunchedEffect(preferences) {
         if (preferences == null) return@LaunchedEffect
+        // Antes que nada: a qué servidor apunta esta instalación. Va aquí porque el cliente
+        // HTTP lee la dirección en cada petición, y la primera es la de recuperar la sesión.
+        // En release se ignora lo guardado: la dirección la fija la compilación y punto.
+        if (ApiConfig.permiteCambiarServidor) {
+            preferences.readServerUrl()?.let { ApiConfig.baseUrl = it }
+        }
         state.restoreFrom(
             completed = preferences.onboardingCompleted.first(),
             savedName = preferences.displayName.first(),
@@ -93,9 +121,25 @@ fun App(
     val scope = rememberCoroutineScope()
     state.onNotify = { message -> scope.launch { snackbarHostState.showSnackbar(message) } }
 
-    LaunchedEffect(Unit) { state.start() }
+    // Se espera a `restored` para no arrancar la sesión contra la dirección de fábrica
+    // cuando hay otra guardada: la primera petición ya debe salir al servidor correcto.
+    LaunchedEffect(restored) { if (restored) state.start() }
 
-    UnDiaMasTheme(darkTheme = state.settings.darkTheme) {
+    // El teléfono decide, salvo que la persona haya elegido explícitamente en Configuración.
+    val oscuro = when (state.settings.themeMode) {
+        ThemeMode.SISTEMA -> isSystemInDarkTheme()
+        ThemeMode.CLARO -> false
+        ThemeMode.OSCURO -> true
+    }
+
+    UnDiaMasTheme(darkTheme = oscuro) {
+        // El splash tapa el arranque: recuperar la sesión y abrir la base local. Va lo
+        // primero para que nadie vea una pantalla a medio montar.
+        if (!splashListo) {
+            SplashScreen(onTerminar = { splashListo = true })
+            return@UnDiaMasTheme
+        }
+
         // Un fallo de conexion no debe dejar la app en blanco ni tumbarla: se explica y se reintenta.
         state.startupError?.let { error ->
             val diagnosis = diagnoseStartupError(error)
@@ -122,7 +166,24 @@ fun App(
             return@UnDiaMasTheme
         }
 
-        // Mientras Firestore autentica, o mientras se restauran las preferencias locales,
+        // Sin sesion no hay datos: el backend no emite tokens anonimos. Va antes que el
+        // indicador de carga porque esperar a nada seria quedarse girando para siempre.
+        if (state.needsAuth) {
+            // Las diapositivas de bienvenida van antes del formulario: explican de qué va
+            // la app a quien todavía no tiene motivo para darle su correo.
+            if (!introVista) {
+                IntroSlides(onTerminar = { introVista = true })
+                return@UnDiaMasTheme
+            }
+            Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+                Box(modifier = Modifier.padding(padding)) {
+                    AuthScreen(state)
+                }
+            }
+            return@UnDiaMasTheme
+        }
+
+        // Mientras se recupera la sesion, o mientras se restauran las preferencias locales,
         // se muestra el mismo indicador: para quien usa la app es una sola espera.
         if (state.isLoading || !restored) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -190,29 +251,37 @@ fun App(
                 }
             },
         ) { padding ->
-            AnimatedContent(
-                targetState = navigator.current,
-                transitionSpec = { screenTransition() },
-                modifier = Modifier.padding(padding),
-                label = "screen",
-            ) { screen ->
-                Box {
-                    when (screen) {
-                        Screen.Inicio -> InicioScreen(state, navigator)
-                        Screen.Sobriedad -> SobrietyScreen(state)
-                        Screen.CheckIn -> CheckInScreen(state, navigator)
-                        Screen.Ia -> IaScreen(state)
-                        Screen.Diario -> DiarioScreen(state)
-                        Screen.Estadisticas -> EstadisticasScreen(state, navigator)
-                        Screen.Calculadora -> CalculadoraScreen(state)
-                        Screen.Emergencia -> EmergenciaScreen(state, navigator)
-                        Screen.UrgeSurfing -> UrgeSurfingScreen(state, navigator)
-                        Screen.Capsulas -> CapsulasScreen(state)
-                        Screen.Habitos -> HabitosScreen(state)
-                        Screen.Anclas -> AnclasScreen(state)
-                        Screen.Biometria -> BiometriaScreen(state, navigator)
-                        Screen.Perfil -> PerfilScreen(state, navigator)
-                        Screen.Configuracion -> ConfiguracionScreen(state)
+            Column(modifier = Modifier.padding(padding)) {
+                // Encima de todo: si algo quedó sin enviar, se dice en cualquier pantalla,
+                // no solo en la que se estaba usando al perder la conexión.
+                SyncBanner(state, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+
+                AnimatedContent(
+                    targetState = navigator.current,
+                    transitionSpec = { screenTransition() },
+                    label = "screen",
+                ) { screen ->
+                    Box {
+                        when (screen) {
+                            Screen.Inicio -> DashboardScreen(state, navigator)
+                            Screen.Sobriedad -> SobrietyScreen(state)
+                            Screen.CheckIn -> CheckInScreen(state, navigator)
+                            Screen.Ia -> IaScreen(state)
+                            Screen.Diario -> DiarioScreen(state)
+                            Screen.Estadisticas -> EstadisticasScreen(state, navigator)
+                            Screen.Calculadora -> CalculadoraScreen(state)
+                            Screen.Emergencia -> EmergenciaScreen(state, navigator)
+                            Screen.UrgeSurfing -> UrgeSurfingScreen(state, navigator)
+                            Screen.Capsulas -> CapsulasScreen(state)
+                            Screen.Habitos -> HabitosScreen(state)
+                            Screen.Anclas -> AnclasScreen(state)
+                            Screen.Biometria -> BiometriaScreen(state, navigator)
+                            Screen.Perfil -> PerfilScreen(state, navigator)
+                            Screen.EditarPerfil -> EditarPerfilScreen(state, onVolver = { navigator.back() })
+                            Screen.Comunidad -> ComunidadScreen(state, navigator)
+                            Screen.PublicarHistoria -> PublicarHistoriaScreen(state, onVolver = { navigator.back() })
+                            Screen.Configuracion -> ConfiguracionScreen(state)
+                        }
                     }
                 }
             }

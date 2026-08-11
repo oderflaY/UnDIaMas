@@ -3,6 +3,39 @@ package com.eter.undiamas.core.presentation.theme
 import androidx.compose.ui.graphics.Color
 
 // ---- Tokens oficiales del sistema de diseño --------------------------------
+//
+// La paleta base es clara: púrpura #6C5CE7 sobre gris casi blanco #F8F9FA. Los tonos
+// oscuros de más abajo se conservan porque el tema oscuro sigue existiendo como opción.
+
+/** Púrpura de marca. Es el color de las acciones: si algo es pulsable e importante, va así. */
+val BrandPurple = Color(0xFF6C5CE7)
+
+/** Extremos del degradado del splash y de la tarjeta principal del inicio. */
+val BrandPurpleLight = Color(0xFF8278FA)
+val BrandPurpleDeep = Color(0xFF5A4FCF)
+
+/** Fondo de las pantallas claras. No es blanco puro: deja que las tarjetas blancas resalten. */
+val CanvasLight = Color(0xFFF8F9FA)
+
+/** Tinta principal y secundaria del tema claro. */
+val InkStrong = Color(0xFF2D3436)
+val InkMuted = Color(0xFFA4B0BE)
+
+/** Acentos cálidos: el naranja marca logros, el crema es el fondo de la frase del día. */
+val AccentOrange = Color(0xFFFFA502)
+val AccentCream = Color(0xFFFFF8E7)
+
+/** Borde muy tenue de inputs y tarjetas; casi no se ve, y ese es el punto. */
+val HairlineLight = Color(0xFFE8EAED)
+
+// ---- Equivalentes del tema oscuro -----------------------------------------
+// No son grises puros: llevan una pizca de azul-violeta para que el púrpura de marca no
+// parezca pegado encima de un fondo neutro que no le corresponde.
+val CanvasDark = Color(0xFF16151D)
+val CanvasDarkElevated = Color(0xFF201F2A)
+val InkMutedDark = Color(0xFF9A96AE)
+val HairlineDark = Color(0xFF2E2C3B)
+
 val BackgroundDark = Color(0xFF0F172A) // Slate 900
 val SurfaceDark = Color(0xFF1E293B) // Slate 800
 

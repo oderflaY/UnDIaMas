@@ -55,6 +55,21 @@ enum class AddictionType(
         description = "Gasto impulsivo o compulsivo",
         substance = false,
     ),
+    /**
+     * No es una adicción, y por eso [substance] es false: la abstinencia no tiene síntomas
+     * físicos que remitan a urgencias. Está aquí porque muchas personas usan la app para
+     * llevar la cuenta de días sin hacerlo, y el contador y la red de apoyo sirven igual.
+     */
+    AUTOLESIONES(
+        title = "Autolesiones",
+        description = "Días sin hacerme daño",
+        substance = false,
+    ),
+    ANSIEDAD(
+        title = "Ansiedad",
+        description = "Manejo de crisis y rumiación",
+        substance = false,
+    ),
     OTRA(
         title = "Otra",
         description = "Prefiero no especificarla",

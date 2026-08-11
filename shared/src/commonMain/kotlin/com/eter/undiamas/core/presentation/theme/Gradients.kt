@@ -7,10 +7,19 @@ import androidx.compose.ui.graphics.Color
 /** Degradado de marca a 45°, usado en las tarjetas hero de racha e inicio. */
 val PrimaryVioletBrush: Brush
     get() = Brush.linearGradient(
-        colors = listOf(PrimaryVioletStart, PrimaryVioletEnd),
+        colors = listOf(BrandPurpleLight, BrandPurpleDeep),
         start = Offset.Zero,
         end = Offset.Infinite, // diagonal ≈ 45°
     )
+
+/**
+ * Degradado vertical del splash: lavanda arriba, púrpura profundo abajo.
+ *
+ * Es vertical y no diagonal a propósito: la pantalla no tiene más contenido que el logo
+ * centrado, y una diagonal le daría una dirección que nada acompaña.
+ */
+val SplashBrush: Brush
+    get() = Brush.verticalGradient(listOf(BrandPurpleLight, BrandPurpleDeep))
 
 val SavingsBrush: Brush
     get() = Brush.linearGradient(listOf(SavingsGoldStart, SavingsGoldEnd))

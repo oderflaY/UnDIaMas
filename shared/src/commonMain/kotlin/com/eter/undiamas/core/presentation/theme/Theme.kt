@@ -1,55 +1,74 @@
 package com.eter.undiamas.core.presentation.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
+/**
+ * Tema oscuro.
+ *
+ * Es la misma marca, no otra app: el púrpura se aclara para que siga siendo legible sobre
+ * fondo oscuro, en vez de cambiarlo por otro color. `surface` queda un punto por encima de
+ * `background` para que las tarjetas se distingan igual que en claro.
+ */
 private val DarkColors = darkColorScheme(
-    primary = PrimaryVioletStart,
-    onPrimary = TextPrimary,
-    primaryContainer = PrimaryVioletEnd,
-    onPrimaryContainer = TextPrimary,
-    secondary = RiskGreen,
-    onSecondary = BackgroundDark,
-    secondaryContainer = SurfaceDark,
-    onSecondaryContainer = TextPrimary,
-    tertiary = RiskYellow,
-    onTertiary = BackgroundDark,
-    tertiaryContainer = SurfaceDark,
+    primary = BrandPurpleLight,
+    onPrimary = Color.White,
+    primaryContainer = BrandPurpleDeep,
+    onPrimaryContainer = Color.White,
+    secondary = BrandPurpleLight,
+    onSecondary = Color.White,
+    tertiary = AccentOrange,
+    onTertiary = InkStrong,
+    tertiaryContainer = CanvasDarkElevated,
     onTertiaryContainer = TextPrimary,
     error = RiskRed,
-    onError = TextPrimary,
+    onError = Color.White,
     errorContainer = EmergencyCoralEnd,
-    onErrorContainer = TextPrimary,
-    background = BackgroundDark,
+    onErrorContainer = Color.White,
+    background = CanvasDark,
     onBackground = TextPrimary,
-    surface = BackgroundDark,
+    surface = CanvasDarkElevated,
     onSurface = TextPrimary,
-    surfaceVariant = SurfaceDark,
-    onSurfaceVariant = TextSecondary,
-    outline = TextSecondary,
+    surfaceVariant = CanvasDarkElevated,
+    onSurfaceVariant = InkMutedDark,
+    outline = HairlineDark,
+    outlineVariant = HairlineDark,
 )
 
+/**
+ * Tema claro, el principal.
+ *
+ * `surface` es blanco puro y `background` el gris #F8F9FA: esa diferencia mínima es lo que
+ * hace que las tarjetas blancas se despeguen del fondo sin necesidad de bordes.
+ */
 private val LightColors = lightColorScheme(
-    primary = PrimaryVioletEnd,
-    onPrimary = SurfaceLight,
-    secondary = RiskGreen,
-    onSecondary = SurfaceLight,
-    tertiary = RiskYellow,
-    onTertiary = InkLight,
+    primary = BrandPurple,
+    onPrimary = Color.White,
+    primaryContainer = BrandPurpleLight,
+    onPrimaryContainer = Color.White,
+    secondary = BrandPurpleDeep,
+    onSecondary = Color.White,
+    tertiary = AccentOrange,
+    onTertiary = Color.White,
+    tertiaryContainer = AccentCream,
+    onTertiaryContainer = InkStrong,
     error = RiskRed,
-    onError = SurfaceLight,
-    background = SurfaceLight,
-    onBackground = InkLight,
-    surface = SurfaceLight,
-    onSurface = InkLight,
-    surfaceVariant = SurfaceLightDim,
-    onSurfaceVariant = InkLightSecondary,
-    outline = InkLightSecondary,
+    onError = Color.White,
+    background = CanvasLight,
+    onBackground = InkStrong,
+    surface = Color.White,
+    onSurface = InkStrong,
+    surfaceVariant = CanvasLight,
+    onSurfaceVariant = InkMuted,
+    outline = HairlineLight,
+    outlineVariant = HairlineLight,
 )
 
 private val AppShapes = Shapes(
@@ -61,11 +80,16 @@ private val AppShapes = Shapes(
 )
 
 /**
- * El sistema de diseño está pensado en oscuro, así que ese es el valor por defecto.
- * El interruptor de Configuración es quien decide en tiempo de ejecución.
+ * Por defecto sigue al teléfono.
+ *
+ * Quien tiene el modo oscuro puesto en el sistema lo tiene puesto por algo — de noche, por
+ * la vista, por batería — y no debería tener que repetírselo a cada app.
  */
 @Composable
-fun UnDiaMasTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
+fun UnDiaMasTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit,
+) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
         shapes = AppShapes,

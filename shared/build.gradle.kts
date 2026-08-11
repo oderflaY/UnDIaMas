@@ -41,10 +41,6 @@ kotlin {
     }
     
     sourceSets {
-        androidMain.dependencies {
-            implementation(libs.compose.uiToolingPreview)
-            implementation(libs.compose.uiTooling)
-        }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
@@ -60,24 +56,38 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.androidx.datastorePreferences)
-            implementation(libs.firebase.app)
-            implementation(libs.firebase.auth)
-            implementation(libs.firebase.firestore)
-            implementation(libs.firebase.functions)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.contentNegotiation)
+            implementation(libs.ktor.serialization.json)
+            implementation(libs.ktor.client.auth)
+            implementation(libs.ktor.client.logging)
+            // SQLite propio en el teléfono: lo que se escribe sin conexión se guarda aquí
+            // y se envía al servidor cuando vuelve la red.
+            implementation(libs.androidx.sqlite)
+            implementation(libs.androidx.sqliteBundled)
         }
         androidMain.dependencies {
-            // Las dependencias GitLive Firebase-android (arriba, en commonMain) requieren
-            // estas versiones explicitas: piden com.google.firebase:* sin version fija,
-            // resuelta normalmente via el Firebase BOM, que este AGP KMP library plugin
-            // no propaga bien a todas las configuraciones (host test, device test, etc.).
-            implementation(libs.firebase.android.common)
-            implementation(libs.firebase.android.auth)
-            implementation(libs.firebase.android.firestore)
-            implementation(libs.firebase.android.functions)
+            implementation(libs.compose.uiToolingPreview)
+            implementation(libs.compose.uiTooling)
+            // Motor HTTP de cada plataforma: Ktor solo define la API en commonMain.
+            implementation(libs.ktor.client.okhttp)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
+            // Responde peticiones con JSON fijo: permite probar la capa API sin servidor.
+            implementation(libs.ktor.client.mock)
+        }
+        getByName("androidHostTest").dependencies {
+            // La prueba de integracion habla con el backend de verdad, no con un mock, asi
+            // que necesita un motor HTTP real en la JVM.
+            implementation(libs.ktor.client.okhttp)
+            // El artefacto de Android trae la libreria nativa de SQLite compilada para el
+            // telefono; estos tests corren en la JVM del escritorio y necesitan la suya.
+            implementation(libs.androidx.sqliteBundled.jvm)
         }
     }
 }

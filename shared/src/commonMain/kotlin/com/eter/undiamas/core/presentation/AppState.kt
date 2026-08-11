@@ -4,45 +4,47 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.eter.undiamas.core.data.firebase.AiMessageRepositoryImpl
-import com.eter.undiamas.core.data.firebase.AuthRepositoryImpl
-import com.eter.undiamas.core.data.firebase.CheckInRepositoryImpl
-import com.eter.undiamas.core.data.firebase.DiaryRepositoryImpl
-import com.eter.undiamas.core.data.firebase.MoodRepositoryImpl
-import com.eter.undiamas.core.data.firebase.PerfilRepositoryImpl
-import com.eter.undiamas.core.data.firebase.configureFirebaseEmulatorsIfNeeded
-import com.eter.undiamas.core.domain.ai.AiProvider
+import com.eter.undiamas.core.data.UserPreferences
+import com.eter.undiamas.core.data.api.ApiConfig
+import com.eter.undiamas.core.data.api.ApiGraph
+import com.eter.undiamas.core.data.local.EstadoSync
+import com.eter.undiamas.core.data.api.asAlert
+import com.eter.undiamas.core.data.api.toDomain
+import com.eter.undiamas.core.data.api.toUserMessage
+import com.eter.undiamas.core.domain.biometrics.BiometricsProvider
+import com.eter.undiamas.core.domain.model.AddictionType
 import com.eter.undiamas.core.domain.model.AiMessage
 import com.eter.undiamas.core.domain.model.CheckInEntry
 import com.eter.undiamas.core.domain.model.Mood
 import com.eter.undiamas.core.domain.model.MoodEntry
+import com.eter.undiamas.core.domain.model.RiskLevel
 import com.eter.undiamas.core.domain.model.TrustedContact
 import com.eter.undiamas.core.domain.model.UserProfile
-import com.eter.undiamas.core.domain.model.AddictionType
-import com.eter.undiamas.core.domain.biometrics.BiometricsProvider
-import com.eter.undiamas.core.data.UserPreferences
+import com.eter.undiamas.core.domain.repository.Alert
+import com.eter.undiamas.core.domain.repository.Reminder
+import com.eter.undiamas.core.domain.repository.Session
 import com.eter.undiamas.features.anclas.domain.Anchor
 import com.eter.undiamas.features.anclas.domain.AnchorKind
+import com.eter.undiamas.features.avisos.domain.ContextoAviso
+import com.eter.undiamas.features.avisos.domain.Notificador
+import com.eter.undiamas.features.avisos.domain.NotificadorInactivo
+import com.eter.undiamas.features.avisos.domain.PlanificadorDeAvisos
+import com.eter.undiamas.features.calculadora.domain.SavingsCalculator
+import com.eter.undiamas.features.comunidad.domain.BorradorDeHistoria
+import com.eter.undiamas.features.comunidad.domain.Historia
+import com.eter.undiamas.features.comunidad.domain.MotivoReporte
+import com.eter.undiamas.features.comunidad.domain.OrdenHistorias
 import com.eter.undiamas.features.capsulas.domain.TimeCapsule
 import com.eter.undiamas.features.capsulas.domain.TimeCapsuleVault
-import com.eter.undiamas.features.habitos.domain.Habit
-import com.eter.undiamas.features.habitos.domain.HabitCompletion
-import com.eter.undiamas.features.habitos.domain.HabitTracker
-import com.eter.undiamas.features.estadisticas.domain.RiskPatternDetector
-import kotlinx.datetime.LocalDate
-import com.eter.undiamas.core.domain.repository.AiMessageRepository
-import com.eter.undiamas.core.domain.repository.AuthRepository
-import com.eter.undiamas.core.domain.repository.CheckInRepository
-import com.eter.undiamas.core.domain.repository.DiaryRepository
-import com.eter.undiamas.core.domain.repository.MoodRepository
-import com.eter.undiamas.core.domain.repository.PerfilRepository
-import com.eter.undiamas.features.calculadora.domain.SavingsCalculator
 import com.eter.undiamas.features.checkin.domain.CheckInHistory
 import com.eter.undiamas.features.checkin.domain.RiskAssessor
 import com.eter.undiamas.features.diario.domain.DiaryEntry
 import com.eter.undiamas.features.diario.domain.SentimentAnalyzer
 import com.eter.undiamas.features.estadisticas.domain.RiskInsights
-import com.eter.undiamas.features.ia.data.CloudFunctionsAiProvider
+import com.eter.undiamas.features.estadisticas.domain.RiskPatternDetector
+import com.eter.undiamas.features.habitos.domain.Habit
+import com.eter.undiamas.features.habitos.domain.HabitCompletion
+import com.eter.undiamas.features.habitos.domain.HabitTracker
 import com.eter.undiamas.features.ia.domain.AiConversationService
 import com.eter.undiamas.features.sobriedad.domain.Milestones
 import com.eter.undiamas.features.sobriedad.domain.SobrietyCounter
@@ -50,63 +52,115 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 private const val SECONDS_PER_DAY = 60L * 60 * 24
+
+/**
+ * Cada cuánto se reintenta enviar lo pendiente aunque nadie avise de un cambio de red.
+ *
+ * Cinco minutos: lo bastante seguido para que nada se quede horas atascado, lo bastante
+ * espaciado para no despertar la radio del teléfono y gastarle la batería a alguien.
+ */
+private const val REINTENTO_SYNC_MILLIS = 5 * 60 * 1000L
+
+/**
+ * Cómo decide la app si va en claro u oscuro.
+ *
+ * [SISTEMA] es el valor por defecto: el teléfono ya sabe si es de noche o si la persona
+ * prefiere el modo oscuro siempre, y respetarlo evita que esta app sea la única que
+ * deslumbra a las tres de la mañana.
+ */
+enum class ThemeMode {
+    SISTEMA,
+    CLARO,
+    OSCURO,
+}
 
 /** Preferencias de la pantalla de Configuración. */
 data class AppSettings(
     val dailyReminders: Boolean = true,
     val reminderHour: Int = 21,
     val weeklySummary: Boolean = false,
-    val darkTheme: Boolean = true,
+    val themeMode: ThemeMode = ThemeMode.SISTEMA,
     val diaryLocked: Boolean = false,
     val stealthMode: Boolean = false,
 )
 
 /**
- * Estado compartido entre pantallas. Perfil, check-ins, diario, animos y mensajes de IA
- * son un espejo reactivo (Observer/Flow) de Firestore: [start] abre la sesion y suscribe
- * los listeners; los metodos `register*`/`add*` escriben al repositorio real y dejan que
- * el propio listener actualice el estado (fuente de verdad unica).
+ * Estado compartido entre pantallas.
+ *
+ * El servidor es la fuente de verdad; esta clase es su espejo en memoria. Cada lista
+ * (`checkIns`, `diaryEntries`...) refleja el StateFlow de su repositorio, y los métodos
+ * `register*`/`add*` escriben contra el backend y dejan que el repositorio actualice el
+ * espejo. Ninguna pantalla habla con la red directamente.
+ *
+ * A diferencia de Firestore, aquí no hay listeners: los datos llegan cuando alguien los
+ * pide ([refreshAll]) o cuando el servidor avisa por el canal de eventos.
  */
 class AppState(
-    private val authRepository: AuthRepository = AuthRepositoryImpl(),
-    private val perfilRepository: PerfilRepository = PerfilRepositoryImpl(),
-    private val checkInRepository: CheckInRepository = CheckInRepositoryImpl(),
-    private val diaryRepository: DiaryRepository = DiaryRepositoryImpl(),
-    private val moodRepository: MoodRepository = MoodRepositoryImpl(),
-    private val aiMessageRepository: AiMessageRepository = AiMessageRepositoryImpl(),
-    aiProvider: AiProvider = CloudFunctionsAiProvider(),
     /** Lectura de la pulsera (Android). null en iOS o en previews. */
     val biometricsProvider: BiometricsProvider? = null,
-    /** Preferencias locales; solo guardan lo justo para no repetir el onboarding. */
+    /** Preferencias locales: tokens de sesión y lo justo para no repetir el onboarding. */
     private val preferences: UserPreferences? = null,
+    private val graph: ApiGraph = ApiGraph(preferences),
+    /** Notificaciones locales del sistema. Sin implementación de plataforma, no hace nada. */
+    private val notificador: Notificador = NotificadorInactivo(),
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    /** uid de la sesion actual (anonima o con correo); null hasta que [start] termine de autenticar. */
+    private val authRepository = graph.auth
+    private val perfilRepository = graph.perfil
+    private val checkInRepository = graph.checkIns
+    private val diaryRepository = graph.diary
+    private val moodRepository = graph.moods
+    private val aiMessageRepository = graph.aiMessages
+    private val relapseRepository = graph.relapses
+    private val trafficLightRepository = graph.trafficLight
+    private val alertRepository = graph.alerts
+    private val reminderRepository = graph.reminders
+    private val statsRepository = graph.stats
+    private val comunidadRepository = graph.comunidad
+
+    /** id de la sesion actual; null mientras no haya nadie dentro. */
     var uid: String? by mutableStateOf(null)
         private set
 
-    /** true mientras se autentica y se espera la primera lectura de Firestore. */
+    var session: Session? by mutableStateOf(null)
+        private set
+
+    /**
+     * true cuando hace falta entrar o crear una cuenta.
+     *
+     * El backend no emite tokens anónimos, así que sin credenciales no hay datos: es la
+     * pantalla de entrada o nada.
+     */
+    var needsAuth: Boolean by mutableStateOf(false)
+        private set
+
+    /** true mientras se recupera la sesion y se piden los primeros datos. */
     var isLoading: Boolean by mutableStateOf(true)
         private set
 
-    /** Error legible de la ultima operacion de login/registro con correo, o null si no hay. */
+    /** true mientras se envia un login o un registro, para bloquear el boton. */
+    var isAuthenticating: Boolean by mutableStateOf(false)
+        private set
+
+    /** Error legible del ultimo login/registro, o null. */
     var authError: String? by mutableStateOf(null)
         private set
 
-    /** Fallo al arrancar la sesion (sin red, Firebase mal configurado). null si todo fue bien. */
+    /** Fallo al arrancar (sin red, servidor apagado). null si todo fue bien. */
     var startupError: String? by mutableStateOf(null)
         private set
 
     /**
-     * Aviso de que alguna coleccion no se pudo cargar, sin ser fatal.
-     * La app sigue usable con lo que si cargo; esto solo lo hace visible.
+     * Aviso de que algo no se pudo cargar, sin ser fatal.
+     * La app sigue usable con lo que sí cargó; esto solo lo hace visible.
      */
     var dataWarning: String? by mutableStateOf(null)
         private set
@@ -115,7 +169,42 @@ class AppState(
         dataWarning = null
     }
 
-    /** Sesiones del bunker de 15 minutos completadas hasta el final. */
+    fun clearAuthError() {
+        authError = null
+    }
+
+    /** Semáforo vigente según el servidor, no según lo último que calculó esta pantalla. */
+    var currentRiskLevel: RiskLevel by mutableStateOf(RiskLevel.VERDE)
+        private set
+
+    /** Racha y ahorro los calcula el backend: no dependen del reloj del teléfono. */
+    var streakSeconds: Long by mutableStateOf(0)
+        private set
+
+    var savedAmount: Double by mutableStateOf(0.0)
+        private set
+
+    /** false cuando el servidor arrancó sin clave de IA. */
+    var isAiAvailable: Boolean by mutableStateOf(true)
+        private set
+
+    /** Hay red según el sistema. No garantiza que el servidor responda. */
+    var isOnline: Boolean by mutableStateOf(true)
+        private set
+
+    /** En qué punto está el envío de lo que se guardó sin conexión. */
+    var syncState: EstadoSync by mutableStateOf(EstadoSync.AL_DIA)
+        private set
+
+    /** Cuántos cambios esperan a que vuelva la red. */
+    var pendingChanges: Int by mutableStateOf(0)
+        private set
+
+    /** Ids de las filas guardadas en el teléfono que el servidor todavía no confirmó. */
+    var unsyncedIds: Set<String> by mutableStateOf(emptySet())
+        private set
+
+    /** Sesiones del búnker de 15 minutos completadas hasta el final. */
     var urgeSessionsCompleted: Int by mutableStateOf(0)
         private set
 
@@ -123,11 +212,8 @@ class AppState(
     private var nextHabitId = 0
     private var nextAnchorId = 0
 
-    private var profileJob: Job? = null
-    private var checkInsJob: Job? = null
-    private var diaryJob: Job? = null
-    private var moodJob: Job? = null
-    private var aiMessagesJob: Job? = null
+    private val mirrorJobs = mutableListOf<Job>()
+    private var eventsJob: Job? = null
 
     var profile: UserProfile by mutableStateOf(
         UserProfile(
@@ -141,7 +227,7 @@ class AppState(
     var settings: AppSettings by mutableStateOf(AppSettings())
         private set
 
-    /** Mientras sea false la app muestra el cuestionario inicial en vez del resto de pantallas. */
+    /** Mientras sea false la app muestra el cuestionario inicial. */
     var isOnboarded: Boolean by mutableStateOf(false)
         private set
 
@@ -150,8 +236,11 @@ class AppState(
     val aiMessages = mutableStateListOf<AiMessage>()
     val moodEntries = mutableStateListOf<MoodEntry>()
 
-    // Estas cuatro aun no tienen coleccion en Firestore, asi que viven en memoria y se
-    // pierden al cerrar la app. Migrarlas es el siguiente paso de la Fase 3.
+    /** Alertas del protocolo de emergencia que creó el servidor. */
+    val alerts = mutableStateListOf<Alert>()
+
+    // Estas cuatro no tienen ruta en el backend todavía, así que viven en memoria y se
+    // pierden al cerrar la app. Es la deuda que queda de esta migración.
     val capsules = mutableStateListOf<TimeCapsule>()
     val habits = mutableStateListOf<Habit>()
     val habitCompletions = mutableStateListOf<HabitCompletion>()
@@ -167,149 +256,539 @@ class AppState(
     val capsuleVault = TimeCapsuleVault()
     val habitTracker = HabitTracker()
     val sentimentAnalyzer = SentimentAnalyzer()
-    val aiConversationService = AiConversationService(aiProvider)
+    val planificadorDeAvisos = PlanificadorDeAvisos()
+    val aiConversationService = AiConversationService(graph.aiProvider)
+
+    // ---- Comunidad ---------------------------------------------------------------
+    //
+    // Se exponen los StateFlow tal cual, sin espejo en listas de Compose: el muro es
+    // contenido remoto y paginado, no algo que la app mantenga sincronizado.
+
+    val comunidadHistorias = comunidadRepository.historias.collectAsMutableState()
+    val comunidadPerfil = comunidadRepository.perfil.collectAsMutableState()
+    val comunidadCargando = comunidadRepository.cargando.collectAsMutableState()
+    val comunidadHayMas = comunidadRepository.hayMas.collectAsMutableState()
 
     /** La pantalla raíz reemplaza esto por una función que muestra un snackbar real. */
     var onNotify: (String) -> Unit = {}
 
     fun notify(message: String) = onNotify(message)
 
-    /** Autentica anonimamente y suscribe perfil + check-ins reales de Firestore. Llamar una sola vez. */
+    // ---- Sesion ------------------------------------------------------------------
+
+    /**
+     * Recupera la sesión guardada y carga los datos. Llamar una sola vez al abrir la app.
+     *
+     * Sin `runCatching`, un servidor apagado tumbaría la app al abrirla. En una app de
+     * recuperación eso es inaceptable: es preferible entrar en modo degradado y ofrecer
+     * reintentar.
+     */
     fun start() {
         scope.launch {
             startupError = null
-            // Sin runCatching, cualquier fallo de red o de configuracion de Firebase se
-            // propaga como excepcion no capturada y tumba la app al abrirla. En una app de
-            // recuperacion eso es inaceptable: es preferible entrar en modo degradado y
-            // ofrecer reintentar.
-            runCatching {
-                configureFirebaseEmulatorsIfNeeded()
-                authRepository.signInAnonymously()
-            }.onSuccess { newUid ->
-                subscribeToUid(newUid)
-            }.onFailure { error ->
-                startupError = error.message ?: "No se pudo conectar con el servidor."
-                isLoading = false
-            }
+            runCatching { authRepository.restore() }
+                .onSuccess { restored ->
+                    if (restored == null) {
+                        needsAuth = true
+                        isLoading = false
+                    } else {
+                        onSignedIn(restored)
+                    }
+                }
+                .onFailure { error ->
+                    startupError = error.toUserMessage()
+                    isLoading = false
+                }
         }
     }
 
-    /** Reintento manual del arranque tras un fallo de conexion. */
+    /** Reintento manual del arranque tras un fallo de conexión. */
     fun retryStart() {
         isLoading = true
         start()
     }
 
     /**
-     * Vincula la sesion anonima actual (con todos sus datos) a un correo/contraseña.
-     * El uid no cambia, asi que no hace falta resuscribir los listeners de perfil/check-ins.
+     * Apunta la app a otro servidor y lo recuerda.
+     *
+     * Surte efecto en la siguiente petición, sin reiniciar: el cliente HTTP lee la
+     * dirección cada vez. Se vuelve a arrancar la sesión porque los tokens del servidor
+     * anterior no valen en el nuevo.
      */
-    fun linkAccountWithEmail(email: String, password: String) {
+    fun useServerUrl(url: String) {
+        ApiConfig.baseUrl = url
         scope.launch {
-            runCatching { authRepository.linkAnonymousWithEmail(email, password) }
-                .onSuccess {
-                    authError = null
-                    notify("Cuenta vinculada. Tus datos seguirán contigo si cambias de dispositivo.")
-                }
-                .onFailure { authError = it.message ?: "No se pudo vincular la cuenta." }
+            preferences?.saveServerUrl(url)
+            isLoading = true
+            start()
         }
     }
 
-    /** Inicia sesion con correo/contraseña y migra la sesion a ese uid. */
+    fun register(email: String, password: String, displayName: String) {
+        authenticate { authRepository.register(email, password, displayName) }
+    }
+
     fun signInWithEmail(email: String, password: String) {
+        authenticate { authRepository.login(email, password) }
+    }
+
+    private fun authenticate(block: suspend () -> Session) {
+        if (isAuthenticating) return
         scope.launch {
-            runCatching { authRepository.signInWithEmail(email, password) }
-                .onSuccess { newUid ->
-                    authError = null
-                    isOnboarded = false
-                    subscribeToUid(newUid)
+            isAuthenticating = true
+            authError = null
+            runCatching { block() }
+                .onSuccess { newSession ->
+                    isLoading = true
+                    onSignedIn(newSession)
                 }
-                .onFailure { authError = it.message ?: "No se pudo iniciar sesión." }
+                .onFailure { authError = it.toUserMessage() }
+            isAuthenticating = false
         }
     }
 
-    /** Cierra la sesion actual y vuelve a abrir una sesion anonima nueva. */
+    /** Cierra la sesión en todos los dispositivos y vuelve a la pantalla de entrada. */
     fun signOut() {
         scope.launch {
-            authRepository.signOut()
+            runCatching { authRepository.logout() }
+            runCatching { notificador.cancelarTodo() }
+            stopMirrors()
+            clearMirroredData()
+            uid = null
+            session = null
             isOnboarded = false
-            subscribeToUid(authRepository.signInAnonymously())
+            needsAuth = true
+            isLoading = false
+            profile = UserProfile(userId = "", displayName = "", sobrietyStartDate = Clock.System.now())
         }
     }
 
-    private fun subscribeToUid(newUid: String) {
-        profileJob?.cancel()
-        checkInsJob?.cancel()
-        diaryJob?.cancel()
-        moodJob?.cancel()
-        aiMessagesJob?.cancel()
+    private suspend fun onSignedIn(newSession: Session) {
+        stopMirrors()
+        clearMirroredData()
+        graph.currentUserId = newSession.userId
+        session = newSession
+        uid = newSession.userId
+        needsAuth = false
+        authError = null
+        profile = profile.copy(userId = newSession.userId, displayName = newSession.displayName)
+
+        // Lo primero es la base del teléfono: la pantalla se pinta con lo que ya hay,
+        // aunque no haya red. Si el teléfono venía de otra cuenta, se borra su caché.
+        graph.local.abrirSesion(newSession.userId)
+        graph.outbox.refrescarConteo()
+        isLoading = false
+
+        startMirrors()
+        observarConexion()
+        refreshAll()
+        listenToServerEvents()
+    }
+
+    /**
+     * Empuja la cola en cuanto vuelve la red.
+     *
+     * También se reintenta cada pocos minutos: "hay wifi" no es lo mismo que "el servidor
+     * responde", y el caso del wifi de cafetería que pide iniciar sesión se resuelve solo
+     * volviendo a probar.
+     */
+    private fun observarConexion() {
+        mirrorJobs += scope.launch {
+            graph.connectivity.estaEnLinea.collect { enLinea ->
+                isOnline = enLinea
+                if (enLinea) {
+                    if (graph.sync.sincronizar()) refreshAllNow()
+                } else {
+                    graph.sync.marcarSinConexion()
+                }
+            }
+        }
+        mirrorJobs += scope.launch {
+            while (true) {
+                delay(REINTENTO_SYNC_MILLIS)
+                if (graph.outbox.pendientes.value > 0) graph.sync.sincronizar()
+            }
+        }
+    }
+
+    /** Reintento manual, para quien no quiere esperar a que la app lo haga sola. */
+    fun sincronizarAhora() {
+        scope.launch {
+            val exito = graph.sync.sincronizar()
+            if (exito) {
+                refreshAllNow()
+                notify("Todo sincronizado")
+            } else {
+                notify("Sigue sin haber conexión. Tus cambios están guardados.")
+            }
+        }
+    }
+
+    // ---- Espejo de los repositorios ----------------------------------------------
+
+    private fun startMirrors() {
+        mirrorJobs += scope.launch {
+            perfilRepository.profile.collect { loaded ->
+                if (loaded != null) {
+                    // El servidor no guarda el tipo de adicción ni la meta de ahorro: se
+                    // conserva lo que ya había en pantalla en vez de borrarlo.
+                    profile = loaded.copy(
+                        addiction = loaded.addiction ?: profile.addiction,
+                        savingsGoal = loaded.savingsGoal ?: profile.savingsGoal,
+                    )
+                    isOnboarded = loaded.displayName.isNotBlank()
+                }
+            }
+        }
+        mirrorJobs += scope.launch {
+            perfilRepository.streakSeconds.collect { segundos ->
+                streakSeconds = segundos
+                // Si la racha en curso ya superó al récord guardado, el récord es esta
+                // racha. Se anota en el perfil para que sobreviva a la próxima recaída:
+                // es lo único que a alguien le queda de un tramo que costó meses.
+                if (segundos > profile.recordStreakSeconds) {
+                    profile = profile.copy(recordStreakSeconds = segundos)
+                }
+            }
+        }
+        mirrorJobs += scope.launch { perfilRepository.savedAmount.collect { savedAmount = it } }
+        mirrorJobs += scope.launch { mirror(checkInRepository.items, checkIns) }
+        mirrorJobs += scope.launch { mirror(diaryRepository.items, diaryEntries) }
+        mirrorJobs += scope.launch { mirror(moodRepository.items, moodEntries) }
+        mirrorJobs += scope.launch { mirror(aiMessageRepository.items, aiMessages) }
+        mirrorJobs += scope.launch { mirror(alertRepository.items, alerts) }
+        mirrorJobs += scope.launch {
+            trafficLightRepository.current.collect { nivel ->
+                val cambio = nivel != currentRiskLevel
+                currentRiskLevel = nivel
+                // El plan de avisos depende del semáforo, así que se rehace en cuanto cambia.
+                if (cambio) reprogramarAvisos(avisarAhora = nivel == RiskLevel.ROJO)
+            }
+        }
+        mirrorJobs += scope.launch { aiMessageRepository.isAvailable.collect { isAiAvailable = it } }
+        mirrorJobs += scope.launch { graph.sync.estado.collect { syncState = it } }
+        mirrorJobs += scope.launch { graph.outbox.pendientes.collect { pendingChanges = it } }
+        mirrorJobs += scope.launch { graph.local.sinEnviar.collect { unsyncedIds = it } }
+        mirrorJobs += scope.launch {
+            reminderRepository.reminder.collect { remote ->
+                if (remote != null) {
+                    settings = settings.copy(
+                        dailyReminders = remote.enabled,
+                        reminderHour = remote.hour,
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun <T> mirror(
+        source: kotlinx.coroutines.flow.StateFlow<List<T>>,
+        target: androidx.compose.runtime.snapshots.SnapshotStateList<T>,
+    ) {
+        source.collect { values ->
+            target.clear()
+            target.addAll(values)
+        }
+    }
+
+    private fun stopMirrors() {
+        mirrorJobs.forEach { it.cancel() }
+        mirrorJobs.clear()
+        eventsJob?.cancel()
+        eventsJob = null
+    }
+
+    private fun clearMirroredData() {
         checkIns.clear()
         diaryEntries.clear()
         moodEntries.clear()
         aiMessages.clear()
-        isLoading = true
-        uid = newUid
-        profile = profile.copy(userId = newUid)
+        alerts.clear()
+    }
 
-        // Cada listener va con .catch: un fallo de permisos o de red en CUALQUIERA de ellos
-        // se propagaria como excepcion no capturada dentro de la corrutina y mataria el
-        // proceso. Que falle el diario no puede tumbar el protocolo de emergencia.
-        profileJob = scope.launch {
-            perfilRepository.observe(newUid)
-                .catch { error ->
-                    dataWarning = "No se pudo cargar tu perfil: ${error.message}"
-                    // Sin esto la app se queda girando para siempre si el perfil falla.
-                    isLoading = false
-                }
-                .collect { loaded ->
-                    if (loaded != null) {
-                        profile = loaded
-                        isOnboarded = true
-                    }
-                    isLoading = false
-                }
+    /**
+     * Pide todos los datos.
+     *
+     * Cada bloque va por separado a propósito: que falle el diario no puede dejar sin
+     * cargar el semáforo ni las alertas, que son la parte crítica.
+     */
+    fun refreshAll() {
+        scope.launch { refreshAllNow() }
+    }
+
+    private suspend fun refreshAllNow() {
+        // Sin conexión no se intenta: la pantalla ya tiene los datos del teléfono, y lanzar
+        // diez peticiones condenadas solo serviría para llenarla de avisos de error.
+        if (!isOnline) {
+            isLoading = false
+            return
         }
-        checkInsJob = scope.launch {
-            checkInRepository.observeRecent(newUid)
-                .catch { error -> dataWarning = "No se pudieron cargar tus check-ins: ${error.message}" }
-                .collect { entries ->
-                    checkIns.clear()
-                    checkIns.addAll(entries)
-                }
-        }
-        diaryJob = scope.launch {
-            diaryRepository.observeRecent(newUid)
-                .catch { error -> dataWarning = "No se pudo cargar tu diario: ${error.message}" }
-                .collect { entries ->
-                    diaryEntries.clear()
-                    diaryEntries.addAll(entries)
-                }
-        }
-        moodJob = scope.launch {
-            moodRepository.observeRecent(newUid)
-                .catch { error -> dataWarning = "No se pudieron cargar tus animos: ${error.message}" }
-                .collect { entries ->
-                    moodEntries.clear()
-                    moodEntries.addAll(entries)
-                }
-        }
-        aiMessagesJob = scope.launch {
-            aiMessageRepository.observeRecent(newUid)
-                .catch { error -> dataWarning = "No se pudo cargar la conversacion: ${error.message}" }
-                .collect { entries ->
-                    aiMessages.clear()
-                    aiMessages.addAll(entries)
-                }
+        loadOrWarn("tu perfil") { perfilRepository.refresh() }
+        isLoading = false
+        loadOrWarn("tus check-ins") { checkInRepository.refresh() }
+        loadOrWarn("el semáforo") { trafficLightRepository.refresh() }
+        // Al volver de estar sin conexión, aquí está lo que pasó mientras tanto.
+        loadOrWarn("tus alertas") { alertRepository.refresh() }
+        loadOrWarn("tu diario") { diaryRepository.refresh() }
+        loadOrWarn("tus ánimos") { moodRepository.refresh() }
+        loadOrWarn("la conversación") { aiMessageRepository.refresh() }
+        loadOrWarn("tu historial de recaídas") { relapseRepository.refresh() }
+        loadOrWarn("tus recordatorios") { reminderRepository.refresh() }
+        loadOrWarn("tus estadísticas") { statsRepository.refresh() }
+        // Con los datos ya cargados, el plan se arma con la racha y el ahorro de verdad.
+        // También repone las alarmas que el sistema pierde al reiniciar el teléfono.
+        reprogramarAvisos()
+    }
+
+    private suspend fun loadOrWarn(what: String, block: suspend () -> Unit) {
+        runCatching { block() }.onFailure { error ->
+            dataWarning = "No se pudo cargar $what: ${error.toUserMessage()}"
         }
     }
 
+    // ---- Avisos en tiempo real ---------------------------------------------------
+
+    /**
+     * Escucha el canal abierto del servidor.
+     *
+     * Sustituye a las notificaciones push: con la app abierta, un semáforo en rojo llega en
+     * el momento. Con la app cerrada no llega nada, pero nada se pierde — queda en
+     * `/v1/alerts`, que es justo lo que [refreshAll] vuelve a leer al abrir.
+     */
+    private fun listenToServerEvents() {
+        eventsJob = scope.launch {
+            runCatching {
+                graph.events.events().collect { event ->
+                    event.asAlert()?.let { payload ->
+                        val alert = payload.alert.toDomain()
+                        alertRepository.onPushed(alert)
+                        val contact = payload.trustedContact?.nombre
+                        notify(
+                            if (contact != null) {
+                                "${alert.message}. Puedes llamar a $contact."
+                            } else {
+                                alert.message
+                            },
+                        )
+                    }
+                    if (event.type == "traffic_light") {
+                        runCatching { trafficLightRepository.refresh() }
+                    }
+                    if (event.type == "check_in_reminder") {
+                        notify("Es tu hora de check-in. ¿Cómo vas hoy?")
+                    }
+                }
+            }
+        }
+    }
+
+    // ---- Avisos ------------------------------------------------------------------
+
+    /**
+     * Todo lo que las plantillas necesitan para hablar con datos de verdad.
+     *
+     * Se arma desde la copia local, así que funciona sin conexión: los avisos siguen
+     * llegando aunque el servidor lleve días caído.
+     */
+    private fun contextoDeAvisos(): ContextoAviso {
+        val ahora = Clock.System.now()
+        val dias = sobrietyCounter.currentStreakSeconds(profile, ahora) / SECONDS_PER_DAY
+        val record = sobrietyCounter.recordStreakSeconds(profile, ahora) / SECONDS_PER_DAY
+        val ahorro = savedAmount.takeIf { it > 0 }
+            ?: savingsCalculator.totalSavings(
+                profile.previousDailyExpense,
+                sobrietyCounter.currentStreakSeconds(profile, ahora),
+            )
+        return ContextoAviso(
+            nombre = profile.displayName,
+            nivel = currentRiskLevel,
+            dias = dias,
+            recordDias = record,
+            ahorro = ahorro,
+            anclas = anchors.toList(),
+            porQue = profile.personalWhy,
+            contacto = profile.trustedContact,
+            checkInHecho = checkIns.any {
+                it.answeredAt.epochSeconds > ahora.epochSeconds - SECONDS_PER_DAY
+            },
+        )
+    }
+
+    /**
+     * Rehace el plan del día.
+     *
+     * [avisarAhora] muestra además uno en el momento: al pasar a rojo, esperar a la
+     * siguiente franja sería llegar tarde a lo único que importa.
+     */
+    fun reprogramarAvisos(avisarAhora: Boolean = false) {
+        if (!settings.dailyReminders) {
+            scope.launch { notificador.cancelarTodo() }
+            return
+        }
+        scope.launch {
+            if (!notificador.tienePermiso()) return@launch
+            val contexto = contextoDeAvisos()
+            val semilla = Clock.System.now().epochSeconds.toInt() / 86_400
+            notificador.programar(planificadorDeAvisos.planDelDia(contexto, semilla))
+            if (avisarAhora) {
+                planificadorDeAvisos.avisoInmediato(contexto, semilla)?.let {
+                    notificador.mostrarAhora(it)
+                }
+            }
+        }
+    }
+
+    /** Pide el permiso de notificaciones y, si lo dan, deja el plan puesto. */
+    fun activarAvisos() {
+        scope.launch {
+            if (notificador.pedirPermiso()) {
+                reprogramarAvisos()
+                notify("Listo. Te acompañaremos según cómo vaya tu día.")
+            } else {
+                notify("Sin permiso de notificaciones no podemos recordarte nada.")
+            }
+        }
+    }
+
+    /** Para probar los textos sin esperar a que llegue la hora. */
+    fun avisoDePrueba() {
+        scope.launch {
+            if (!notificador.pedirPermiso()) {
+                notify("Sin permiso de notificaciones no podemos recordarte nada.")
+                return@launch
+            }
+            val aviso = planificadorDeAvisos.avisoInmediato(
+                contextoDeAvisos(),
+                Clock.System.now().epochSeconds.toInt(),
+            )
+            if (aviso == null) notify("Todavía no hay datos para armar un aviso.")
+            else notificador.mostrarAhora(aviso)
+        }
+    }
+
+    // ---- Acciones de comunidad ----------------------------------------------------
+
+    fun cargarComunidad(orden: OrdenHistorias) {
+        scope.launch {
+            runCatching { comunidadRepository.refrescar(orden) }
+                .onFailure { dataWarning = "No se pudo cargar la comunidad: ${it.toUserMessage()}" }
+            runCatching { comunidadRepository.refrescarPerfil() }
+        }
+    }
+
+    fun cargarMasComunidad(orden: OrdenHistorias) {
+        scope.launch { runCatching { comunidadRepository.cargarMas(orden) } }
+    }
+
+    fun cargarPerfilDeComunidad() {
+        scope.launch { runCatching { comunidadRepository.refrescarPerfil() } }
+    }
+
+    /** Guarda el alias si cambió y publica. [onListo] solo corre si el servidor aceptó. */
+    fun publicarHistoria(borrador: BorradorDeHistoria, alias: String, onListo: () -> Unit) {
+        scope.launch {
+            runCatching {
+                if (alias.isNotBlank() && alias != comunidadRepository.perfil.value.alias) {
+                    comunidadRepository.guardarAlias(alias)
+                }
+                comunidadRepository.publicar(borrador)
+            }.onSuccess {
+                notify("Publicada. Gracias por contarlo.")
+                onListo()
+            }.onFailure {
+                dataWarning = "No se pudo publicar: ${it.toUserMessage()}"
+            }
+        }
+    }
+
+    fun marcarHistoriaUtil(historia: Historia) {
+        scope.launch {
+            runCatching { comunidadRepository.marcarUtil(historia.id, !historia.marcada) }
+        }
+    }
+
+    fun reportarHistoria(historia: Historia, motivo: MotivoReporte, detalle: String = "") {
+        scope.launch {
+            runCatching { comunidadRepository.reportar(historia.id, motivo, detalle) }
+                .onSuccess { notify("Gracias. Lo vamos a revisar.") }
+        }
+    }
+
+    fun bloquearAutor(historia: Historia) {
+        scope.launch {
+            runCatching { comunidadRepository.bloquearAutor(historia.id) }
+                .onSuccess { notify("No volverás a ver historias de esa persona.") }
+        }
+    }
+
+    fun borrarHistoria(historia: Historia) {
+        scope.launch {
+            runCatching { comunidadRepository.borrar(historia.id) }
+                .onSuccess { notify("Historia borrada.") }
+        }
+    }
+
+    /** Convierte un StateFlow en algo que Compose puede leer sin recolectar en cada pantalla. */
+    private fun <T> kotlinx.coroutines.flow.StateFlow<T>.collectAsMutableState():
+        androidx.compose.runtime.State<T> {
+        val estado = mutableStateOf(value)
+        scope.launch { collect { estado.value = it } }
+        return estado
+    }
+
+    // ---- Perfil ------------------------------------------------------------------
+
+    /**
+     * Cambia el perfil en pantalla y lo guarda.
+     *
+     * Se pinta antes de que el servidor conteste para que el formulario no se sienta
+     * trabado; si la escritura falla, el aviso lo dice y el siguiente refresco corrige.
+     */
     fun updateProfile(update: (UserProfile) -> UserProfile) {
-        profile = update(profile)
-        persistProfile()
+        val before = profile
+        val updated = update(profile)
+        profile = updated
+        val currentUid = uid ?: return
+        if (currentUid.isBlank()) return
+        scope.launch {
+            runCatching {
+                if (updated.displayName != before.displayName || updated.personalWhy != before.personalWhy) {
+                    perfilRepository.saveIdentity(updated.displayName, updated.personalWhy)
+                }
+                if (updated.trustedContact != before.trustedContact ||
+                    updated.supportNetwork != before.supportNetwork
+                ) {
+                    perfilRepository.saveContacts(updated)
+                }
+                if (updated.sobrietyStartDate != before.sobrietyStartDate ||
+                    updated.previousDailyExpense != before.previousDailyExpense
+                ) {
+                    perfilRepository.saveTracker(updated)
+                }
+            }.onFailure { dataWarning = "No se pudo guardar tu perfil: ${it.toUserMessage()}" }
+        }
     }
 
     fun updateSettings(update: (AppSettings) -> AppSettings) {
-        settings = update(settings)
+        val before = settings
+        val updated = update(settings)
+        settings = updated
+        // Apagar los recordatorios cancela lo pendiente; encenderlos rehace el plan.
+        if (updated.dailyReminders != before.dailyReminders) reprogramarAvisos()
+        if (updated.dailyReminders == before.dailyReminders && updated.reminderHour == before.reminderHour) return
+        if (uid == null) return
+        scope.launch {
+            runCatching {
+                reminderRepository.save(
+                    Reminder(
+                        enabled = updated.dailyReminders,
+                        hour = updated.reminderHour,
+                        minute = 0,
+                        timeZone = reminderRepository.reminder.value?.timeZone ?: "America/Mexico_City",
+                    ),
+                )
+            }.onFailure { dataWarning = "No se pudo guardar el recordatorio: ${it.toUserMessage()}" }
+        }
     }
 
     /** Cierra el cuestionario inicial construyendo el perfil con lo que respondió la persona. */
@@ -332,12 +811,23 @@ class AppState(
             addiction = addiction,
         )
         isOnboarded = true
-        persistProfile()
+        val onboarded = profile
+        scope.launch {
+            // Primero al teléfono, y solo después se intenta el servidor: quien completa
+            // esto sin conexión no puede perder lo que acaba de escribir.
+            runCatching { perfilRepository.sembrar(onboarded) }
+            runCatching {
+                perfilRepository.saveIdentity(onboarded.displayName, onboarded.personalWhy)
+                perfilRepository.saveTracker(onboarded)
+                if (onboarded.trustedContact != null) perfilRepository.saveContacts(onboarded)
+            }.onFailure { dataWarning = "No se pudo guardar tu perfil: ${it.toUserMessage()}" }
+            if (isOnline) runCatching { perfilRepository.refresh() }
+        }
     }
 
     /**
-     * Restaura lo guardado localmente para pintar algo util antes de que Firestore responda.
-     * Cuando llega el perfil remoto, el listener lo sobreescribe: Firestore manda.
+     * Restaura lo guardado localmente para pintar algo útil antes de que el servidor
+     * responda. Cuando llega el perfil remoto lo sobrescribe: el servidor manda.
      */
     fun restoreFrom(completed: Boolean, savedName: String, savedAddiction: AddictionType?) {
         if (!completed) return
@@ -348,61 +838,103 @@ class AppState(
         isOnboarded = true
     }
 
-    private fun persistProfile() {
-        val currentUid = uid ?: return
-        scope.launch { perfilRepository.save(currentUid, profile) }
-    }
+    // ---- Escrituras --------------------------------------------------------------
 
-    /** Escribe el check-in en Firestore; [checkIns] se actualiza solo via el listener de [start]. */
+    /**
+     * Guarda el check-in y, si sale ROJO, deja constancia en el semáforo.
+     *
+     * Los dos avisos los crea el servidor, no la app: un check-in en rojo genera su alerta
+     * aunque el teléfono se apague justo después de enviarlo.
+     */
     fun registerCheckIn(entry: CheckInEntry) {
-        val currentUid = uid ?: return
-        scope.launch { checkInRepository.add(currentUid, entry) }
-    }
-
-    /** Escribe la entrada en Firestore; [diaryEntries] se actualiza solo via el listener de [subscribeToUid]. */
-    fun addDiaryEntry(entry: DiaryEntry) {
-        val currentUid = uid ?: return
-        scope.launch { diaryRepository.add(currentUid, entry) }
-    }
-
-    /** Escribe el animo en Firestore; [moodEntries] se actualiza solo via el listener de [subscribeToUid]. */
-    fun registerMood(mood: Mood) {
-        val currentUid = uid ?: return
-        val entry = MoodEntry(id = "", userId = currentUid, mood = mood, registeredAt = Clock.System.now())
-        scope.launch { moodRepository.add(currentUid, entry) }
-    }
-
-    /** Escribe el mensaje en Firestore; [aiMessages] se actualiza solo via el listener de [subscribeToUid]. */
-    fun registerAiMessage(message: AiMessage) {
-        val currentUid = uid ?: return
-        scope.launch { aiMessageRepository.add(currentUid, message) }
-    }
-
-    /** Derecho al olvido: borra todos los datos reales del usuario y vuelve al cuestionario inicial. */
-    fun purgeAllData() {
-        val currentUid = uid
-        diaryEntries.clear()
-        aiMessages.clear()
-        moodEntries.clear()
-        profile = UserProfile(
-            userId = currentUid.orEmpty(),
-            displayName = "",
-            sobrietyStartDate = Clock.System.now(),
-        )
-        settings = AppSettings()
-        isOnboarded = false
-        if (currentUid != null) {
-            scope.launch {
-                perfilRepository.delete(currentUid)
-                checkInRepository.deleteAll(currentUid)
-                diaryRepository.deleteAll(currentUid)
-                moodRepository.deleteAll(currentUid)
-                aiMessageRepository.deleteAll(currentUid)
-            }
+        if (uid == null) return
+        scope.launch {
+            runCatching {
+                checkInRepository.add(entry)
+                trafficLightRepository.save(
+                    status = entry.riskLevel,
+                    reason = entry.note.ifBlank { "Check-in" },
+                    triggerLevel = entry.urgeIntensity,
+                    suggestedActions = emptyList(),
+                )
+                perfilRepository.refresh()
+            }.onFailure { dataWarning = "No se pudo guardar el check-in: ${it.toUserMessage()}" }
         }
     }
 
-    // ---- Funciones locales (aun sin coleccion en Firestore) -------------------------
+    fun addDiaryEntry(entry: DiaryEntry) {
+        if (uid == null) return
+        scope.launch {
+            runCatching { diaryRepository.add(entry.text) }
+                .onFailure { dataWarning = "No se pudo guardar la entrada: ${it.toUserMessage()}" }
+        }
+    }
+
+    fun deleteDiaryEntry(id: String) {
+        scope.launch {
+            runCatching { diaryRepository.delete(id) }
+                .onFailure { dataWarning = "No se pudo borrar la entrada: ${it.toUserMessage()}" }
+        }
+    }
+
+    fun registerMood(mood: Mood) {
+        if (uid == null) return
+        scope.launch {
+            runCatching { moodRepository.add(mood) }
+                .onFailure { dataWarning = "No se pudo guardar tu ánimo: ${it.toUserMessage()}" }
+        }
+    }
+
+    /** Pinta el mensaje en la conversación; el servidor es quien guarda el historial. */
+    fun registerAiMessage(message: AiMessage) {
+        aiMessageRepository.appendLocal(message)
+    }
+
+    /**
+     * Registra la recaída en el servidor, que reinicia la racha y conserva el récord.
+     *
+     * Ese cálculo no se hace en el teléfono a propósito: el récord histórico es lo único
+     * que queda intacto tras una recaída, y no puede depender de la hora del dispositivo.
+     */
+    fun registerRelapse(note: String = "", triggers: List<String> = emptyList()) {
+        if (uid == null) return
+        scope.launch {
+            runCatching {
+                relapseRepository.register(note, triggers)
+                perfilRepository.refresh()
+            }.onFailure { dataWarning = "No se pudo registrar la recaída: ${it.toUserMessage()}" }
+        }
+    }
+
+    fun markAlertHandled(id: String) {
+        scope.launch { runCatching { alertRepository.markHandled(id) } }
+    }
+
+    /**
+     * Derecho al olvido, hasta donde llega el backend.
+     *
+     * El servidor solo permite borrar entradas del diario; no hay ninguna ruta que elimine
+     * check-ins, ánimos, recaídas ni la cuenta. Se borra lo que sí se puede, se cierra la
+     * sesión y se avisa de lo que queda — decir "todo borrado" cuando no lo está sería
+     * mentirle a alguien sobre sus propios datos de recaídas.
+     */
+    fun purgeAllData() {
+        val borrables = diaryEntries.map { it.id }
+        scope.launch {
+            runCatching { borrables.forEach { diaryRepository.delete(it) } }
+            // La copia local se va entera, aunque el servidor conserve el historial: quien
+            // pulsa esto suele querer que no quede nada en ESTE teléfono.
+            runCatching { graph.local.borrarTodo() }
+            preferences?.clear()
+            notify(
+                "Se borró tu diario y se cerró la sesión. Tu historial de check-ins sigue " +
+                    "en el servidor: para eliminarlo hay que pedirlo directamente.",
+            )
+            signOut()
+        }
+    }
+
+    // ---- Funciones locales (aún sin ruta en el backend) --------------------------
 
     fun registerUrgeOvercome() {
         urgeSessionsCompleted += 1
@@ -431,7 +963,7 @@ class AppState(
         habitCompletions.removeAll { it.habitId == habitId }
     }
 
-    /** Alterna el cumplimiento de un habito ese dia, sin duplicar registros. */
+    /** Alterna el cumplimiento de un hábito ese día, sin duplicar registros. */
     fun toggleHabit(habitId: String, date: LocalDate) {
         val existing = habitCompletions.firstOrNull { it.habitId == habitId && it.date == date }
         if (existing != null) habitCompletions.remove(existing) else habitCompletions.add(HabitCompletion(habitId, date))
@@ -450,13 +982,16 @@ class AppState(
                 tileSeed = nuevoId,
             ),
         )
+        // Ahora hay un motivo más que recordarle: el plan lo puede usar desde hoy.
+        reprogramarAvisos()
     }
 
     fun removeAnchor(anchorId: String) {
         anchors.removeAll { it.id == anchorId }
+        reprogramarAvisos()
     }
 
-    /** Persiste localmente lo minimo para no repetir el cuestionario inicial. */
+    /** Persiste localmente lo mínimo para no repetir el cuestionario inicial. */
     suspend fun persistOnboarding() {
         preferences?.saveOnboarding(profile.displayName, profile.addiction)
     }
@@ -464,5 +999,4 @@ class AppState(
     suspend fun clearPersisted() {
         preferences?.clear()
     }
-
 }

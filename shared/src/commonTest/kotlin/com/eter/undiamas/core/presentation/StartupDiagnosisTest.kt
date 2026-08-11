@@ -6,45 +6,58 @@ import kotlin.test.assertTrue
 
 class StartupDiagnosisTest {
 
+    /**
+     * El fallo número uno al conectar por primera vez: en el emulador de Android
+     * `localhost` es el propio emulador, no la computadora que lo hospeda. El consejo tiene
+     * que decir eso, no "revisa tu internet".
+     */
     @Test
-    fun `auth sin habilitar no culpa a la conexion del usuario`() {
-        val d = diagnoseStartupError("An internal error has occurred. [ CONFIGURATION_NOT_FOUND ]")
+    fun `un servidor apagado explica la direccion del emulador`() {
+        val d = diagnoseStartupError("java.net.ConnectException: Connection refused")
 
-        assertEquals("Falta configurar el servidor", d.title)
-        assertTrue("Firebase" in d.advice)
-        // El fallo es del backend: mandar a revisar el internet seria mandar a buscar mal.
-        assertTrue("internet" !in d.advice.lowercase() || "conexión está bien" in d.advice)
+        assertEquals("El servidor no responde", d.title)
+        assertTrue("10.0.2.2" in d.advice)
+        assertTrue("internet" !in d.advice.lowercase())
     }
 
     @Test
-    fun `operacion restringida por admin se trata como falta de configuracion`() {
-        val d = diagnoseStartupError("ADMIN_RESTRICTED_OPERATION")
+    fun `un fallo de conexion del motor HTTP se reconoce igual`() {
+        val d = diagnoseStartupError("Failed to connect to /127.0.0.1:8080")
 
-        assertEquals("Falta configurar el servidor", d.title)
+        assertEquals("El servidor no responde", d.title)
     }
 
     @Test
-    fun `permisos de firestore apuntan a las reglas`() {
-        val d = diagnoseStartupError("PERMISSION_DENIED: Missing or insufficient permissions")
+    fun `http bloqueado por Android se nombra por lo que es`() {
+        val d = diagnoseStartupError("CLEARTEXT communication to 10.0.2.2 not permitted by network security policy")
 
-        assertEquals("Sin permisos para leer tus datos", d.title)
-        assertTrue("reglas" in d.advice)
+        assertEquals("Android bloqueó la conexión", d.title)
+        assertTrue("manifiesto" in d.advice)
+    }
+
+    @Test
+    fun `una direccion inexistente manda a revisar la configuracion, no el internet`() {
+        val d = diagnoseStartupError("Unable to resolve host mi-servidor.local")
+
+        assertEquals("No se encuentra el servidor", d.title)
+        assertTrue("Configuración" in d.advice)
+    }
+
+    @Test
+    fun `una sesion caducada dice que los datos siguen ahi`() {
+        val d = diagnoseStartupError("[401 unauthenticated] falta el header Authorization")
+
+        assertEquals("Tu sesión expiró", d.title)
+        // Quien ve esta pantalla necesita saber que no perdió su racha.
+        assertTrue("siguen" in d.advice)
     }
 
     @Test
     fun `un fallo de red si manda a revisar la conexion`() {
-        val d = diagnoseStartupError("Unable to resolve host firebaseio.com")
+        val d = diagnoseStartupError("network is unreachable")
 
         assertEquals("Sin conexión", d.title)
         assertTrue("internet" in d.advice)
-    }
-
-    @Test
-    fun `una clave invalida senala el archivo de configuracion`() {
-        val d = diagnoseStartupError("API key not valid. Please pass a valid API key.")
-
-        assertEquals("Configuración inválida", d.title)
-        assertTrue("google-services.json" in d.advice)
     }
 
     @Test

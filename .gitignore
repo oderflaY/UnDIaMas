@@ -30,3 +30,9 @@ functions/.env*
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Claves de firma de release: una clave filtrada permite publicar actualizaciones
+# falsas de la app en nombre de quien la publica.
+keystore.properties
+*.jks
+*.keystore

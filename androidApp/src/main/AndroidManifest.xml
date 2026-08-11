@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Sin INTERNET, Auth/Firestore/Functions fallan y el arranque no puede completarse. -->
+    <!-- Sin INTERNET no hay sesión ni datos: el arranque no puede completarse. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Lectura de la pulsera vía Health Connect: solo lo que consume el análisis. -->
+    <!-- Recordatorios de racha, anclas y ahorro, y los avisos de apoyo en semáforo rojo. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Lectura de la pulsera vía Health Connect: solo lo que consume el análisis. -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
 
@@ -20,8 +22,17 @@
         <package android:name="com.google.android.apps.healthdata" />
     </queries>
 
+    <!-- El tráfico sin cifrar solo se permite en debug, donde el backend local habla http
+         en la wifi. En release el valor es false: el historial de recaídas de alguien no
+         puede viajar en claro por una wifi pública. Lo fija el buildType en Gradle. -->
+    <!-- Sin copia de seguridad automática: aquí hay tokens de sesión y el historial local
+         de recaídas y de diario. No puede acabar en el Drive de nadie ni restaurarse en
+         otro teléfono sin volver a iniciar sesión. -->
     <application
-        android:allowBackup="true"
+        android:usesCleartextTraffic="${usesCleartextTraffic}"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -42,6 +53,11 @@
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
         </activity>
+
+        <!-- Publica los avisos programados. No exportado: solo lo dispara nuestra alarma. -->
+        <receiver
+            android:name=".avisos.AvisoReceiver"
+            android:exported="false" />
 
         <!-- Mismo rationale para Android 14+, que usa esta acción del sistema. -->
         <activity-alias

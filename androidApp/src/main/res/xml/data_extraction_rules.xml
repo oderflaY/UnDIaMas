@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 12+ separa la copia en la nube de la transferencia directa entre teléfonos.
+    Aquí se excluye todo en ambos casos, por lo mismo: en esta app "los datos" son el
+    historial de recaídas de una persona y su sesión abierta. Que se restauren solos en
+    otro dispositivo es exactamente lo que no debe pasar.
+
+    Quien cambie de teléfono no pierde nada: sus datos están en el servidor y vuelven al
+    iniciar sesión. Lo que no viaja es la copia local.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

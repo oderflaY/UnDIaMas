@@ -30,9 +30,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
+import com.eter.undiamas.core.presentation.ThemeMode
 import com.eter.undiamas.core.presentation.closeApp
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import com.eter.undiamas.core.data.api.ApiConfig
+import com.eter.undiamas.core.data.api.isValidBaseUrl
 import com.eter.undiamas.core.presentation.components.SectionCard
 import com.eter.undiamas.core.presentation.components.pressable
 import com.eter.undiamas.core.presentation.theme.AccentDiario
@@ -76,55 +78,95 @@ fun ConfiguracionScreen(state: AppState) {
             SettingRow(AppIcons.Resumen, "Resumen semanal", AccentDiario, settings.weeklySummary) { checked ->
                 state.updateSettings { it.copy(weeklySummary = checked) }
             }
+
+            // Explica el trato antes de pedir el permiso: cuántos avisos y por qué cambian.
+            Text(
+                "Cuántas veces te escribimos depende de tu semáforo: en verde un par al " +
+                    "día, en amarillo unos cuantos, y en rojo estamos encima. Hablamos de " +
+                    "tu racha, tus motivos y lo que llevas ahorrado.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = { state.activarAvisos() },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(AppIcons.Notificaciones, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Activar avisos")
+                }
+                OutlinedButton(
+                    onClick = { state.avisoDePrueba() },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Ver un ejemplo") }
+            }
         }
 
         SectionCard {
             SectionHeader(AppIcons.TemaOscuro, "Apariencia", RiskYellow)
-            SettingRow(AppIcons.TemaOscuro, "Tema oscuro", RiskYellow, settings.darkTheme) { checked ->
-                state.updateSettings { it.copy(darkTheme = checked) }
+            Text(
+                "Por defecto la app sigue lo que tengas puesto en el teléfono.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ThemeMode.entries.forEach { modo ->
+                    OpcionDeTema(
+                        modo = modo,
+                        seleccionado = settings.themeMode == modo,
+                        modifier = Modifier.weight(1f),
+                        onClick = { state.updateSettings { it.copy(themeMode = modo) } },
+                    )
+                }
             }
         }
 
         SectionCard {
             SectionHeader(AppIcons.Perfil, "Cuenta", AccentDiario)
             Text(
-                "Sesión activa: ${state.uid?.take(8) ?: "…"} (anónima). Vincula un correo " +
-                    "para no perder tus datos si cambias de dispositivo.",
+                state.session?.let { "Sesión activa: ${it.email}" }
+                    ?: "Sin sesión activa.",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            var email by remember { mutableStateOf("") }
-            var password by remember { mutableStateOf("") }
+            Text(
+                "Tu historial vive en el servidor, así que sigue contigo si cambias de " +
+                    "teléfono. Cerrar sesión aquí la cierra en todos tus dispositivos.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        // Solo en debug, para probar en un teléfono físico contra el servidor de otra
+        // máquina de la wifi. En la app publicada no aparece: dejar que alguien reapunte la
+        // app a otro servidor es dejar que le roben la sesión y el historial.
+        if (ApiConfig.permiteCambiarServidor) SectionCard {
+            SectionHeader(AppIcons.Escudo, "Servidor", RiskYellow)
+            var serverUrl by remember { mutableStateOf(ApiConfig.baseUrl) }
             OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Correo") },
+                value = serverUrl,
+                onValueChange = { serverUrl = it.trim() },
+                label = { Text("Dirección del backend") },
+                isError = serverUrl.isNotBlank() && !isValidBaseUrl(serverUrl),
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
                 singleLine = true,
             )
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Contraseña") },
-                visualTransformation = PasswordVisualTransformation(),
+            Button(
+                onClick = {
+                    state.useServerUrl(serverUrl)
+                    state.notify("Conectando con $serverUrl")
+                },
+                enabled = isValidBaseUrl(serverUrl) && serverUrl != ApiConfig.baseUrl,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                singleLine = true,
-            )
-            state.authError?.let {
-                Text(it, style = MaterialTheme.typography.labelMedium, color = RiskRed)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(
-                    onClick = { state.signInWithEmail(email, password) },
-                    modifier = Modifier.weight(1f),
-                ) { Text("Iniciar sesión") }
-                Button(
-                    onClick = { state.linkAccountWithEmail(email, password) },
-                    modifier = Modifier.weight(1f),
-                ) { Text("Crear cuenta") }
-            }
+            ) { Text("Usar esta dirección") }
         }
 
         SectionCard {
@@ -182,8 +224,8 @@ fun ConfiguracionScreen(state: AppState) {
                     Text("Borrado de emergencia")
                 }
                 Text(
-                    "Elimina de este dispositivo tu perfil, tus check-ins, tu diario y tus " +
-                        "conversaciones. No se puede deshacer.",
+                    "Borra tu diario y cierra la sesión en todos tus dispositivos. No se " +
+                        "puede deshacer.",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -213,11 +255,12 @@ fun ConfiguracionScreen(state: AppState) {
     if (showPurge) {
         AlertDialog(
             onDismissRequest = { showPurge = false },
-            title = { Text("¿Borrar todo de forma permanente?") },
+            title = { Text("¿Borrar y cerrar sesión?") },
             text = {
                 Text(
-                    "Se eliminarán tu perfil, tus check-ins, tu diario y tus conversaciones. " +
-                        "Esta acción no se puede deshacer.",
+                    "Se elimina tu diario del servidor y todo lo guardado en este teléfono, " +
+                        "y se cierra la sesión. Tus check-ins y tu historial de recaídas " +
+                        "siguen en el servidor: eliminarlos hay que pedirlo aparte.",
                 )
             },
             confirmButton = {
@@ -232,6 +275,75 @@ fun ConfiguracionScreen(state: AppState) {
             },
             dismissButton = { TextButton(onClick = { showPurge = false }) { Text("Cancelar") } },
         )
+    }
+}
+
+/**
+ * Una de las tres opciones de tema.
+ *
+ * Se distingue por borde y por color de texto, no solo por relleno: en una pantalla a
+ * plena luz —que es cuando alguien busca justo este ajuste— el relleno solo no basta.
+ */
+@Composable
+private fun OpcionDeTema(
+    modo: ThemeMode,
+    seleccionado: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val icono = when (modo) {
+        ThemeMode.SISTEMA -> AppIcons.Configuracion
+        ThemeMode.CLARO -> AppIcons.Dia
+        ThemeMode.OSCURO -> AppIcons.TemaOscuro
+    }
+    val etiqueta = when (modo) {
+        ThemeMode.SISTEMA -> "Sistema"
+        ThemeMode.CLARO -> "Claro"
+        ThemeMode.OSCURO -> "Oscuro"
+    }
+
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = if (seleccionado) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        border = BorderStroke(
+            width = if (seleccionado) 1.5.dp else 1.dp,
+            color = if (seleccionado) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.outline
+            },
+        ),
+        modifier = modifier.pressable(onClick),
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                icono,
+                contentDescription = null,
+                tint = if (seleccionado) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.size(22.dp),
+            )
+            Text(
+                etiqueta,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (seleccionado) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+        }
     }
 }
 
@@ -287,7 +399,8 @@ private fun HourPicker(selected: Int, onSelect: (Int) -> Unit) {
             }
         }
         Text(
-            "La notificación real llega con Firebase Cloud Messaging en la Fase 3.",
+            "Los avisos llegan del servidor mientras la app está abierta. Si estaba " +
+                "cerrada, los verás al volver a entrar.",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

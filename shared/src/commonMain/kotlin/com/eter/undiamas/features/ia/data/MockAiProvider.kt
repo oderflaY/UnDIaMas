@@ -7,9 +7,10 @@ import com.eter.undiamas.core.domain.model.RiskLevel
 import kotlin.time.Clock
 
 /**
- * Implementación de marcador de posición del puerto [AiProvider] mientras Fase 3 integra
- * Firebase AI Logic. Se reemplazará detrás de la misma interfaz (Factory/Facade) sin tocar
- * el resto de la capa de dominio ni la presentación.
+ * Implementación local del puerto [AiProvider], sin red.
+ *
+ * La real es [ApiAiProvider], que habla con el asistente del backend. Esta se conserva para
+ * previews y para poder trabajar en la pantalla de chat con el servidor apagado.
  *
  * El tono cambia según el nivel de riesgo: alegre en verde, reflexivo en amarillo y de
  * contención directa en rojo.

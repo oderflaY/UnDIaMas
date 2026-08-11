@@ -250,6 +250,12 @@ fun PerfilScreen(state: AppState, navigator: Navigator) {
             ) { Text("Agregar a mi red") }
         }
 
+        Button(onClick = { navigator.goTo(Screen.EditarPerfil) }, modifier = Modifier.fillMaxWidth()) {
+            Icon(AppIcons.Editar, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Text("Editar perfil")
+        }
+
         OutlinedButton(onClick = { navigator.goTo(Screen.Configuracion) }, modifier = Modifier.fillMaxWidth()) {
             Icon(AppIcons.Configuracion, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))

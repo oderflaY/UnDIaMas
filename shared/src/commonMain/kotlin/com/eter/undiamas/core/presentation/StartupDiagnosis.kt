@@ -4,8 +4,8 @@ package com.eter.undiamas.core.presentation
  * Explicacion util de un fallo de arranque.
  *
  * Decirle "revisa tu internet" a alguien cuya conexion funciona lo manda a buscar el
- * problema donde no esta. Estos casos son de configuracion del backend, no del telefono,
- * y conviene nombrarlos por lo que son.
+ * problema donde no esta. Los fallos tipicos al conectar con este backend son de
+ * direccion o de configuracion, no del telefono, y conviene nombrarlos por lo que son.
  */
 data class StartupDiagnosis(
     val title: String,
@@ -15,39 +15,53 @@ data class StartupDiagnosis(
 
 fun diagnoseStartupError(rawMessage: String?): StartupDiagnosis {
     val message = rawMessage.orEmpty()
-    val detail = message.ifBlank { "Error desconocido al iniciar sesión." }
+    val detail = message.ifBlank { "Error desconocido al conectar con el servidor." }
 
     return when {
-        // Auth no esta habilitado/provisionado en el proyecto de Firebase.
-        message.contains("CONFIGURATION_NOT_FOUND", ignoreCase = true) ||
-            message.contains("ADMIN_RESTRICTED_OPERATION", ignoreCase = true) ->
+        // El error numero uno al empezar: en el emulador, localhost es el propio emulador.
+        message.contains("Connection refused", ignoreCase = true) ||
+            message.contains("ConnectException", ignoreCase = true) ||
+            message.contains("Failed to connect", ignoreCase = true) ->
             StartupDiagnosis(
-                title = "Falta configurar el servidor",
-                advice = "Tu conexión está bien. Falta habilitar el inicio de sesión anónimo " +
-                    "en la consola de Firebase (Authentication → Sign-in method → Anónimo).",
+                title = "El servidor no responde",
+                advice = "Comprueba que el backend esté corriendo y que la dirección sea la " +
+                    "correcta. Desde el emulador de Android hay que usar 10.0.2.2, no " +
+                    "localhost; desde un teléfono, la IP de tu computadora en la wifi. " +
+                    "Puedes cambiarla en Configuración → Servidor.",
                 technicalDetail = detail,
             )
 
-        message.contains("PERMISSION_DENIED", ignoreCase = true) ||
-            message.contains("Missing or insufficient permissions", ignoreCase = true) ->
+        // Android bloquea http:// salvo que el manifiesto lo permita.
+        message.contains("CLEARTEXT", ignoreCase = true) ->
             StartupDiagnosis(
-                title = "Sin permisos para leer tus datos",
-                advice = "Faltan desplegar las reglas de Firestore del proyecto.",
+                title = "Android bloqueó la conexión",
+                advice = "El servidor habla http:// sin cifrar y el sistema no lo permite. " +
+                    "En desarrollo se habilita en el manifiesto; en producción hay que " +
+                    "usar https://.",
                 technicalDetail = detail,
             )
 
-        message.contains("API key not valid", ignoreCase = true) ||
-            message.contains("API_KEY", ignoreCase = true) ->
+        message.contains("Unable to resolve host", ignoreCase = true) ||
+            message.contains("UnknownHost", ignoreCase = true) ->
             StartupDiagnosis(
-                title = "Configuración inválida",
-                advice = "El archivo google-services.json no corresponde a este proyecto.",
+                title = "No se encuentra el servidor",
+                advice = "La dirección del backend no corresponde a ninguna máquina " +
+                    "alcanzable desde aquí. Revísala en Configuración → Servidor.",
                 technicalDetail = detail,
             )
 
-        message.contains("UNAVAILABLE", ignoreCase = true) ||
-            message.contains("network", ignoreCase = true) ||
-            message.contains("Unable to resolve host", ignoreCase = true) ||
-            message.contains("timeout", ignoreCase = true) ->
+        message.contains("unauthenticated", ignoreCase = true) ||
+            message.contains("sesión expiró", ignoreCase = true) ->
+            StartupDiagnosis(
+                title = "Tu sesión expiró",
+                advice = "Vuelve a entrar con tu correo y contraseña. Tus datos siguen " +
+                    "guardados en el servidor.",
+                technicalDetail = detail,
+            )
+
+        message.contains("network", ignoreCase = true) ||
+            message.contains("timeout", ignoreCase = true) ||
+            message.contains("conexión", ignoreCase = true) ->
             StartupDiagnosis(
                 title = "Sin conexión",
                 advice = "Revisa tu conexión a internet e inténtalo de nuevo.",
@@ -57,7 +71,7 @@ fun diagnoseStartupError(rawMessage: String?): StartupDiagnosis {
         else ->
             StartupDiagnosis(
                 title = "No pudimos conectar",
-                advice = "Ocurrió un problema al iniciar tu sesión. Inténtalo de nuevo.",
+                advice = "Ocurrió un problema al conectar con el servidor. Inténtalo de nuevo.",
                 technicalDetail = detail,
             )
     }

@@ -56,8 +56,6 @@ import androidx.compose.material3.Icon
 @Composable
 fun SobrietyScreen(state: AppState) {
     var showConfirm by remember { mutableStateOf(false) }
-    var showPostMortem by remember { mutableStateOf(false) }
-    var postMortemTriggers by remember { mutableStateOf(emptySet<Trigger>()) }
 
     val now by rememberNow()
     val streakSeconds = state.sobrietyCounter.currentStreakSeconds(state.profile, now)
@@ -159,88 +157,8 @@ fun SobrietyScreen(state: AppState) {
     }
 
     if (showConfirm) {
-        AlertDialog(
-            onDismissRequest = { showConfirm = false },
-            title = { Text("¿Reiniciar el contador?") },
-            text = {
-                Text(
-                    "Caer es parte del proceso de aprendizaje. Esto no borra tu esfuerzo " +
-                        "ni tu récord histórico. ¿Deseas reiniciar el contador?",
-                )
-            },
-            confirmButton = {
-                Button(
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    onClick = {
-                        state.updateProfile { profile ->
-                            state.sobrietyCounter.registerRelapse(profile, Clock.System.now())
-                        }
-                        showConfirm = false
-                        showPostMortem = true
-                    },
-                ) { Text("Sí, reiniciar") }
-            },
-            dismissButton = { TextButton(onClick = { showConfirm = false }) { Text("Cancelar") } },
-        )
-    }
-
-    if (showPostMortem) {
-        AlertDialog(
-            onDismissRequest = { showPostMortem = false },
-            title = { Text("¿Qué crees que lo detonó?") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "Reconocerlo no es culparte: es información para reforzar tu plan.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Trigger.entries.forEach { trigger ->
-                            val selected = trigger in postMortemTriggers
-                            Surface(
-                                shape = RoundedCornerShape(50),
-                                color = if (selected) {
-                                    AccentCheckIn.copy(alpha = 0.3f)
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                },
-                                modifier = Modifier.pressable({
-                                    postMortemTriggers = if (selected) {
-                                        postMortemTriggers - trigger
-                                    } else {
-                                        postMortemTriggers + trigger
-                                    }
-                                }),
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(trigger.icon, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Text(trigger.label, style = MaterialTheme.typography.labelMedium)
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    showPostMortem = false
-                    state.notify("Tu récord se conserva. Empezamos de nuevo, juntos.")
-                    postMortemTriggers = emptySet()
-                }) { Text("Guardar y continuar") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showPostMortem = false
-                    postMortemTriggers = emptySet()
-                }) { Text("Ahora no") }
-            },
-        )
+        // Mismo diálogo que el enlace del inicio: un solo sitio donde vive el texto y la
+        // lista de detonantes, para que no se separen con el tiempo.
+        DialogoDeRecaida(state = state, onCerrar = { showConfirm = false })
     }
 }

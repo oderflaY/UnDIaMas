@@ -1,25 +1,31 @@
 package com.eter.undiamas.core.domain.repository
 
-import kotlinx.coroutines.flow.Flow
+/** Quien esta usando la app ahora mismo. */
+data class Session(
+    val userId: String,
+    val email: String,
+    val displayName: String,
+    val role: String = "patient",
+) {
+    val isTherapist: Boolean get() = role == "therapist"
+}
 
 /**
- * Puerto de autenticacion. El modo por defecto de esta app es la sesion anonima
- * (Fase 3 · 07): cada instalacion obtiene un uid propio sin pedir registro.
+ * Puerto de autenticacion contra el backend propio.
+ *
+ * Ya no hay sesion anonima: el servidor solo emite tokens a cuentas con correo y
+ * contraseña. A cambio, los datos dejan de estar atados a la instalacion — quien cambia de
+ * telefono recupera su historial, que en una app de recuperacion pesa mas que ahorrarse un
+ * paso en el alta.
  */
 interface AuthRepository {
-    val currentUserId: Flow<String?>
+    /** Recupera la sesion guardada al abrir la app, o null si toca pedir credenciales. */
+    suspend fun restore(): Session?
 
-    suspend fun signInAnonymously(): String
+    suspend fun register(email: String, password: String, displayName: String): Session
 
-    /**
-     * Vincula la sesion anonima actual a un correo/contraseña (registro), conservando el
-     * mismo uid y por tanto todos los datos ya guardados. Si no hay sesion anonima activa
-     * se comporta como un registro nuevo.
-     */
-    suspend fun linkAnonymousWithEmail(email: String, password: String): String
+    suspend fun login(email: String, password: String): Session
 
-    /** Inicia sesion con correo/contraseña. Devuelve el uid resultante. */
-    suspend fun signInWithEmail(email: String, password: String): String
-
-    suspend fun signOut()
+    /** Cierra la sesion en todos los dispositivos e invalida los tokens guardados. */
+    suspend fun logout()
 }
