@@ -117,7 +117,7 @@ class ApiClientTest {
         }
         val (api, _) = graphWith(engine, Tokens("t", "r"))
 
-        val error = assertFailsWith<ApiException> { api.chat("hola") }
+        val error = assertFailsWith<ApiException> { api.journal() }
 
         assertEquals(ApiErrorCode.RATE_LIMITED, error.code)
         assertTrue("Espera" in error.userMessage)

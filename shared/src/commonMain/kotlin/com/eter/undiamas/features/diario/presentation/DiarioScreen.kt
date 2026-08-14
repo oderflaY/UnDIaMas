@@ -37,7 +37,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.components.pressable
-import com.eter.undiamas.core.presentation.theme.AccentAsistente
+import com.eter.undiamas.core.presentation.theme.AccentMagenta
 import com.eter.undiamas.core.presentation.theme.AccentCheckIn
 import com.eter.undiamas.core.presentation.theme.AccentDiario
 import com.eter.undiamas.core.presentation.theme.AccentPerfil
@@ -53,7 +53,7 @@ import com.eter.undiamas.core.presentation.icon
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 
-private val entryAccents = listOf(RiskGreen, AccentDiario, AccentCheckIn, AccentPerfil, AccentAsistente)
+private val entryAccents = listOf(RiskGreen, AccentDiario, AccentCheckIn, AccentPerfil, AccentMagenta)
 
 @Composable
 fun DiarioScreen(state: AppState) {

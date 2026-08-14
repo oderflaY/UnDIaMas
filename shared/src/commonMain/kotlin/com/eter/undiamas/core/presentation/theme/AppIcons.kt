@@ -22,7 +22,6 @@ import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.CalendarMonth
@@ -129,8 +128,6 @@ object AppIcons {
     val Tendencia: ImageVector = Icons.Rounded.TrendingUp
     val Meta: ImageVector = Icons.Rounded.Flag
 
-    // Asistente
-    val Asistente: ImageVector = Icons.Rounded.AutoAwesome
     val Mente: ImageVector = Icons.Rounded.Psychology
     val Enviar: ImageVector = Icons.Rounded.Send
 

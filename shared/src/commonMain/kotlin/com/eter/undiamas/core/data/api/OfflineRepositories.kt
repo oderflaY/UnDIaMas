@@ -4,14 +4,12 @@ import com.eter.undiamas.core.data.local.BorradoPendiente
 import com.eter.undiamas.core.data.local.LocalStore
 import com.eter.undiamas.core.data.local.Outbox
 import com.eter.undiamas.core.data.local.TipoPendiente
-import com.eter.undiamas.core.domain.model.AiMessage
 import com.eter.undiamas.core.domain.model.CheckInEntry
 import com.eter.undiamas.core.domain.model.Mood
 import com.eter.undiamas.core.domain.model.MoodEntry
 import com.eter.undiamas.core.domain.model.RelapseEvent
 import com.eter.undiamas.core.domain.model.RiskLevel
 import com.eter.undiamas.core.domain.model.UserProfile
-import com.eter.undiamas.core.domain.repository.AiMessageRepository
 import com.eter.undiamas.core.domain.repository.Alert
 import com.eter.undiamas.core.domain.repository.AlertRepository
 import com.eter.undiamas.core.domain.repository.CheckInRepository
@@ -294,9 +292,16 @@ class OfflinePerfilRepository(
     override val streakSeconds: StateFlow<Long> = local.rachaSegundos
     override val savedAmount: StateFlow<Double> = local.ahorro
 
+    private val _onboardingCompleto = MutableStateFlow(false)
+    override val onboardingCompleto: StateFlow<Boolean> = _onboardingCompleto.asStateFlow()
+
     override suspend fun refresh() {
         val usuario = api.me()
         val tracker = api.tracker()
+        // `startDate` en null significa que esta cuenta nunca guardo un tracker, es decir,
+        // que nunca termino el cuestionario. Es la unica marca fiable: el nombre no sirve
+        // porque el registro ya lo pide, y darlo por hecho cerraba el cuestionario solo.
+        if (tracker.startDate != null) _onboardingCompleto.value = true
         local.guardarPerfil(
             buildProfile(usuario, tracker, previous = local.perfil.value),
             rachaSegundos = tracker.rachaSegundos,
@@ -341,6 +346,8 @@ class OfflinePerfilRepository(
      * Es una aproximación: en cuanto vuelve la red, el número que manda es el del backend.
      */
     override suspend fun saveTracker(profile: UserProfile) {
+        // Guardar el tracker es justo lo que cierra el cuestionario, tambien sin conexion.
+        _onboardingCompleto.value = true
         val ahora = Clock.System.now().epochSeconds
         val racha = (ahora - profile.sobrietyStartDate.epochSeconds).coerceAtLeast(0)
         local.guardarPerfil(
@@ -394,39 +401,3 @@ class OfflineReminderRepository(
     }
 }
 
-/**
- * Chat con el asistente. **No pasa por la cola**, a propósito.
- *
- * Encolar un mensaje al asistente significaría que alguien escribe "tengo muchas ganas de
- * tomar" en el metro, no pasa nada, y tres horas después le llega una respuesta a algo que
- * ya se resolvió como pudo. Es mejor decir de frente que hace falta conexión y señalar el
- * botón de emergencia, que sí funciona sin red.
- */
-class OfflineAiMessageRepository(
-    private val api: UnDiaMasApi,
-) : AiMessageRepository {
-
-    private val _items = MutableStateFlow<List<AiMessage>>(emptyList())
-    override val items: StateFlow<List<AiMessage>> = _items.asStateFlow()
-
-    private val _isAvailable = MutableStateFlow(true)
-    override val isAvailable: StateFlow<Boolean> = _isAvailable.asStateFlow()
-
-    override suspend fun refresh() {
-        try {
-            _items.value = api.aiMessages().map { it.toDomain("") }.sortedBy { it.sentAt }
-            _isAvailable.value = true
-        } catch (error: ApiException) {
-            if (error.status == 404) {
-                _isAvailable.value = false
-                _items.value = emptyList()
-            } else {
-                throw error
-            }
-        }
-    }
-
-    override fun appendLocal(message: AiMessage) {
-        _items.value = _items.value + message
-    }
-}

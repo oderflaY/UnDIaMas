@@ -234,12 +234,12 @@ experiencia: es un plan de consumo.
 La app está apuntando ya a estas rutas. Cuando las tengas, con esto ves si el contrato cuadra:
 
 ```fish
-T=$(curl -s -X POST http://192.168.1.145:8080/v1/auth/login \
+T=$(curl -s -X POST https://api.undiamas.site/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"…","password":"…"}' | python3 -c "import json,sys;print(json.load(sys.stdin)['accessToken'])")
 
-curl -s -H "Authorization: Bearer $T" http://192.168.1.145:8080/v1/community/me
-curl -s -H "Authorization: Bearer $T" "http://192.168.1.145:8080/v1/community/stories?sort=racha&limit=5"
+curl -s -H "Authorization: Bearer $T" https://api.undiamas.site/v1/community/me
+curl -s -H "Authorization: Bearer $T" "https://api.undiamas.site/v1/community/stories?sort=racha&limit=5"
 ```
 
 La app no trae datos de ejemplo: hasta que existan estas rutas, el muro sale vacío con su

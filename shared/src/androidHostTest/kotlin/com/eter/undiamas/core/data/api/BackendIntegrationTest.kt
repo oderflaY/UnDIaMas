@@ -23,7 +23,16 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 
-private const val BASE_URL = "http://192.168.1.145:8080"
+/**
+ * Servidor contra el que correr estas pruebas, o vacio para saltarlas.
+ *
+ * Sale de una variable de entorno y no de una constante para que nadie las lance sin
+ * querer contra produccion: crean cuentas de verdad, y las cuentas de prueba no pintan
+ * nada en la base de las personas que usan la app.
+ *
+ *     UNDIAMAS_TEST_API=http://127.0.0.1:8080 ./gradlew :shared:testAndroidHostTest
+ */
+private val BASE_URL: String = System.getenv("UNDIAMAS_TEST_API").orEmpty()
 
 /** Un puerto donde no escucha nadie: es la forma más fiel de simular "sin conexión". */
 private const val URL_SIN_RED = "http://127.0.0.1:9"
@@ -40,7 +49,7 @@ private const val URL_SIN_RED = "http://127.0.0.1:9"
  */
 class BackendIntegrationTest {
 
-    private val disponible: Boolean = runCatching {
+    private val disponible: Boolean = BASE_URL.isNotBlank() && runCatching {
         runBlocking {
             HttpClient(OkHttp).use { it.get("$BASE_URL/healthz").bodyAsText().contains("ok") }
         }

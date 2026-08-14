@@ -16,7 +16,6 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.URLProtocol
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
@@ -56,8 +55,8 @@ fun createApiHttpClient(
         }
 
         defaultRequest {
-            // Se lee en cada peticion, no una sola vez al construir el cliente: asi cambiar
-            // la direccion en Configuracion surte efecto sin reiniciar la app.
+            // Se resuelve en cada peticion en vez de fijarse al construir el cliente:
+            // asi los tests pueden apuntar a su propio servidor sin rehacer el grafo.
             url(baseUrl())
             contentType(ContentType.Application.Json)
         }
@@ -133,7 +132,7 @@ private fun defaultCodeFor(status: Int): String = when (status) {
     403 -> ApiErrorCode.FORBIDDEN
     404 -> ApiErrorCode.NOT_FOUND
     429 -> ApiErrorCode.RATE_LIMITED
-    502 -> ApiErrorCode.AI_UNAVAILABLE
+    502 -> ApiErrorCode.UNAVAILABLE
     else -> "unknown"
 }
 
@@ -147,9 +146,3 @@ private fun defaultCodeFor(status: Int): String = when (status) {
 fun HttpClient.forgetCachedToken() {
     clearAuthTokens()
 }
-
-/** Comprueba que la direccion escrita a mano en Configuracion sea usable. */
-fun isValidBaseUrl(value: String): Boolean = runCatching {
-    val url = io.ktor.http.Url(value)
-    url.host.isNotBlank() && (url.protocol == URLProtocol.HTTP || url.protocol == URLProtocol.HTTPS)
-}.getOrDefault(false)

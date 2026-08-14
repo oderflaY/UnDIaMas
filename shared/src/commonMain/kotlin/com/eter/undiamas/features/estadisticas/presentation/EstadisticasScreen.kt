@@ -33,7 +33,7 @@ import com.eter.undiamas.core.presentation.components.SectionCard
 import com.eter.undiamas.core.presentation.label
 import com.eter.undiamas.core.presentation.rememberNow
 import com.eter.undiamas.core.presentation.streakDays
-import com.eter.undiamas.core.presentation.theme.AccentAsistente
+import com.eter.undiamas.core.presentation.theme.AccentMagenta
 import com.eter.undiamas.core.presentation.theme.AccentDiario
 import com.eter.undiamas.core.presentation.theme.RiskRed
 import com.eter.undiamas.core.presentation.theme.StatsBrush
@@ -50,11 +50,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
-import com.eter.undiamas.core.presentation.Screen
-import com.eter.undiamas.core.presentation.Navigator
 
 @Composable
-fun EstadisticasScreen(state: AppState, navigator: Navigator) {
+fun EstadisticasScreen(state: AppState) {
     val now by rememberNow()
     val streak = state.sobrietyCounter.currentStreakSeconds(state.profile, now)
 
@@ -129,19 +127,9 @@ fun EstadisticasScreen(state: AppState, navigator: Navigator) {
             MiniStat(AppIcons.Escudo, "Impulsos superados", "$urgesOvercome", RiskRed, Modifier.weight(1f))
             MiniStat(AppIcons.Calendario, "Días con registro", "$registeredDays", AccentDiario, Modifier.weight(1f))
         }
-        // Acceso a la lectura de la pulsera, que alimenta este mismo análisis.
-        SectionCard(onClick = { navigator.goTo(Screen.Biometria) }) {
-            SectionHeader(AppIcons.Corazon, "Biometría de tu pulsera", RiskRed)
-            Text(
-                "Pasos y ritmo cardíaco de las últimas 24 h vía Health Connect.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            MiniStat(AppIcons.Diario, "Entradas", "${state.diaryEntries.size}", AccentDiario, Modifier.weight(1f))
-            MiniStat(AppIcons.Asistente, "Apoyos IA", "${state.aiMessages.size}", AccentAsistente, Modifier.weight(1f))
+            MiniStat(AppIcons.Diario, "Entradas del diario", "${state.diaryEntries.size}", AccentDiario, Modifier.weight(1f))
+            MiniStat(AppIcons.Ancla, "Impulsos registrados", "${state.checkIns.count { it.urgeIntensity > 0 }}", AccentMagenta, Modifier.weight(1f))
         }
     }
 }

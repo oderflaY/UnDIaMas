@@ -36,6 +36,7 @@ import com.eter.undiamas.core.domain.model.CheckInEntry
 import com.eter.undiamas.core.domain.model.RiskAssessment
 import com.eter.undiamas.core.domain.model.RiskLevel
 import com.eter.undiamas.core.domain.model.Trigger
+import com.eter.undiamas.core.domain.model.triggersInOrder
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.Navigator
 import com.eter.undiamas.core.presentation.Screen
@@ -130,7 +131,7 @@ fun CheckInScreen(state: AppState, navigator: Navigator) {
                 AnimatedVisibility(visible = showTriggers) {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text("¿Qué lo detonó?", style = MaterialTheme.typography.titleMedium)
-                        TriggerCloud(selectedTriggers) { trigger ->
+                        TriggerCloud(selectedTriggers, state.profile.triggersInOrder()) { trigger ->
                             selectedTriggers = if (trigger in selectedTriggers) {
                                 selectedTriggers - trigger
                             } else {
@@ -264,13 +265,17 @@ private fun AnswerTile(
 }
 
 @Composable
-private fun TriggerCloud(selected: Set<Trigger>, onToggle: (Trigger) -> Unit) {
+private fun TriggerCloud(
+    selected: Set<Trigger>,
+    disponibles: List<Trigger> = Trigger.entries,
+    onToggle: (Trigger) -> Unit,
+) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Trigger.entries.forEach { trigger ->
+        disponibles.forEach { trigger ->
             val isSelected = trigger in selected
             Surface(
                 shape = MaterialTheme.shapes.extraLarge,

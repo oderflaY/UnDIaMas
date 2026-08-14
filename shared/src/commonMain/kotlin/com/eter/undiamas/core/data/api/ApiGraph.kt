@@ -7,7 +7,7 @@ import com.eter.undiamas.core.data.local.Outbox
 import com.eter.undiamas.core.data.local.SyncManager
 import com.eter.undiamas.core.data.local.UndiamasDatabase
 import com.eter.undiamas.core.data.local.crearBaseDeDatos
-import com.eter.undiamas.features.ia.data.ApiAiProvider
+import com.eter.undiamas.core.domain.repository.AuthRepository
 import io.ktor.client.engine.HttpClientEngine
 
 /**
@@ -19,6 +19,14 @@ import io.ktor.client.engine.HttpClientEngine
  */
 class ApiGraph(
     preferences: UserPreferences? = null,
+    /**
+     * Beta sin backend: todo se guarda en el telefono y nada sale de el.
+     *
+     * No es un "modo sin conexion" —eso ya existe y guarda para enviar despues— sino la
+     * ausencia total de servidor: no hay sesion que pedir, ni cola que vaciar, ni muro de
+     * comunidad. Lo elige la variante de compilacion, no la persona que usa la app.
+     */
+    val modoLocal: Boolean = false,
     baseUrl: () -> String = { ApiConfig.baseUrl },
     engine: HttpClientEngine? = null,
     database: UndiamasDatabase = crearBaseDeDatos(),
@@ -43,8 +51,8 @@ class ApiGraph(
 
     val api = UnDiaMasApi(http, tokenStore)
 
-    val local = LocalStore(database)
-    val outbox = Outbox(database)
+    val local = LocalStore(database, marcarPendientes = !modoLocal)
+    val outbox = Outbox(database, activa = !modoLocal)
     val sync = SyncManager(api, local, outbox)
     val connectivity = ConnectivityMonitor()
 
@@ -54,14 +62,15 @@ class ApiGraph(
      * Si no hay red el intento falla y no pasa nada: el dato ya esta en SQLite y la cola lo
      * reintentara. Por eso se traga el error aqui en vez de propagarlo a la pantalla.
      */
-    private val alSincronizar: suspend () -> Unit = { runCatching { sync.sincronizar() } }
+    private val alSincronizar: suspend () -> Unit =
+        if (modoLocal) ({ }) else ({ runCatching { sync.sincronizar() }; Unit })
 
-    val auth = ApiAuthRepository(api, tokenStore, sessionCache)
+    val auth: AuthRepository =
+        if (modoLocal) LocalAuthRepository(sessionCache) else ApiAuthRepository(api, tokenStore, sessionCache)
     val perfil = OfflinePerfilRepository(api, local, outbox, alSincronizar)
     val checkIns = OfflineCheckInRepository(api, local, outbox, alSincronizar)
     val diary = OfflineDiaryRepository(api, local, outbox, alSincronizar)
     val moods = OfflineMoodRepository(api, local, outbox, alSincronizar)
-    val aiMessages = OfflineAiMessageRepository(api)
     val relapses = OfflineRelapseRepository(api, local, outbox, alSincronizar)
     val trafficLight = OfflineTrafficLightRepository(api, local, outbox, alSincronizar)
     val alerts = OfflineAlertRepository(api, local, outbox)
@@ -69,5 +78,4 @@ class ApiGraph(
     val stats = ApiStatsRepository(api)
     val comunidad = ApiComunidadRepository(api)
     val events = EventStream(api)
-    val aiProvider = ApiAiProvider(api)
 }

@@ -37,6 +37,25 @@ class UnDiaMasApi(
         }.body<AuthResponse>().also { it.persist() }
 
     /**
+     * Pide un codigo de recuperacion por correo.
+     *
+     * Devuelve 503 si el servidor no tiene SMTP configurado. La pantalla lo dice tal cual
+     * en vez de dejar a alguien esperando un correo que no va a llegar nunca.
+     */
+    suspend fun forgotPassword(email: String) {
+        http.post("/v1/auth/password/forgot") {
+            setBody(ForgotPasswordRequest(email.trim()))
+        }
+    }
+
+    /** Cambia la contraseña con el codigo recibido. No inicia sesion: eso se hace despues. */
+    suspend fun resetPassword(email: String, code: String, password: String) {
+        http.post("/v1/auth/password/reset") {
+            setBody(ResetPasswordRequest(email.trim(), code.trim(), password))
+        }
+    }
+
+    /**
      * Cierra la sesion en todos los dispositivos.
      *
      * Los tokens locales se borran pase lo que pase: si el servidor no contesta, dejar el
@@ -140,18 +159,6 @@ class UnDiaMasApi(
 
     suspend fun riskTrends(days: Int = 30): RiskTrendsDto =
         http.get("/v1/stats/risk-trends") { parameter("days", days) }.body()
-
-    // ---- IA --------------------------------------------------------------------
-
-    /**
-     * Solo se manda el texto. El historial y el nivel de riesgo los lee el servidor de la
-     * base con el id del token, asi que la conversacion sobrevive a reinstalar la app.
-     */
-    suspend fun chat(prompt: String): ChatResponse =
-        http.post("/v1/ai/chat") { setBody(ChatRequest(prompt)) }.body()
-
-    suspend fun aiMessages(): List<AiMessageDto> =
-        http.get("/v1/ai/messages").body<ItemsDto<AiMessageDto>>().items
 
     // ---- Comunidad -------------------------------------------------------------
 

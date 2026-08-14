@@ -5,15 +5,12 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.eter.undiamas.core.data.UserPreferences
-import com.eter.undiamas.core.data.api.ApiConfig
 import com.eter.undiamas.core.data.api.ApiGraph
 import com.eter.undiamas.core.data.local.EstadoSync
 import com.eter.undiamas.core.data.api.asAlert
 import com.eter.undiamas.core.data.api.toDomain
 import com.eter.undiamas.core.data.api.toUserMessage
-import com.eter.undiamas.core.domain.biometrics.BiometricsProvider
 import com.eter.undiamas.core.domain.model.AddictionType
-import com.eter.undiamas.core.domain.model.AiMessage
 import com.eter.undiamas.core.domain.model.CheckInEntry
 import com.eter.undiamas.core.domain.model.Mood
 import com.eter.undiamas.core.domain.model.MoodEntry
@@ -21,7 +18,12 @@ import com.eter.undiamas.core.domain.model.RiskLevel
 import com.eter.undiamas.core.domain.model.TrustedContact
 import com.eter.undiamas.core.domain.model.UserProfile
 import com.eter.undiamas.core.domain.repository.Alert
+import com.eter.undiamas.core.data.api.ApiException
+import com.eter.undiamas.core.domain.model.SavingsGoal
+import com.eter.undiamas.core.domain.model.SupportRole
+import com.eter.undiamas.core.domain.model.Trigger
 import com.eter.undiamas.core.domain.repository.Reminder
+import kotlinx.datetime.TimeZone
 import com.eter.undiamas.core.domain.repository.Session
 import com.eter.undiamas.features.anclas.domain.Anchor
 import com.eter.undiamas.features.anclas.domain.AnchorKind
@@ -45,7 +47,6 @@ import com.eter.undiamas.features.estadisticas.domain.RiskPatternDetector
 import com.eter.undiamas.features.habitos.domain.Habit
 import com.eter.undiamas.features.habitos.domain.HabitCompletion
 import com.eter.undiamas.features.habitos.domain.HabitTracker
-import com.eter.undiamas.features.ia.domain.AiConversationService
 import com.eter.undiamas.features.sobriedad.domain.Milestones
 import com.eter.undiamas.features.sobriedad.domain.SobrietyCounter
 import kotlinx.coroutines.CoroutineScope
@@ -103,11 +104,17 @@ data class AppSettings(
  * pide ([refreshAll]) o cuando el servidor avisa por el canal de eventos.
  */
 class AppState(
-    /** Lectura de la pulsera (Android). null en iOS o en previews. */
-    val biometricsProvider: BiometricsProvider? = null,
+    /**
+     * Beta sin backend: todo vive en el telefono.
+     *
+     * Se expone para que las pantallas puedan decirlo en vez de fingir que hay servidor:
+     * la comunidad no existe y los datos no tienen copia en ningun sitio, y callarse
+     * cualquiera de las dos cosas seria engañar a quien prueba la app.
+     */
+    val modoLocal: Boolean = false,
     /** Preferencias locales: tokens de sesión y lo justo para no repetir el onboarding. */
     private val preferences: UserPreferences? = null,
-    private val graph: ApiGraph = ApiGraph(preferences),
+    private val graph: ApiGraph = ApiGraph(preferences, modoLocal),
     /** Notificaciones locales del sistema. Sin implementación de plataforma, no hace nada. */
     private val notificador: Notificador = NotificadorInactivo(),
 ) {
@@ -118,7 +125,6 @@ class AppState(
     private val checkInRepository = graph.checkIns
     private val diaryRepository = graph.diary
     private val moodRepository = graph.moods
-    private val aiMessageRepository = graph.aiMessages
     private val relapseRepository = graph.relapses
     private val trafficLightRepository = graph.trafficLight
     private val alertRepository = graph.alerts
@@ -184,10 +190,6 @@ class AppState(
     var savedAmount: Double by mutableStateOf(0.0)
         private set
 
-    /** false cuando el servidor arrancó sin clave de IA. */
-    var isAiAvailable: Boolean by mutableStateOf(true)
-        private set
-
     /** Hay red según el sistema. No garantiza que el servidor responda. */
     var isOnline: Boolean by mutableStateOf(true)
         private set
@@ -227,13 +229,22 @@ class AppState(
     var settings: AppSettings by mutableStateOf(AppSettings())
         private set
 
-    /** Mientras sea false la app muestra el cuestionario inicial. */
+    /**
+     * Mientras sea false la app muestra el cuestionario inicial.
+     *
+     * Se enciende por un hecho explicito y nunca se deduce del perfil: haber contestado el
+     * cuestionario y tener nombre son cosas distintas, y confundirlas hacia que el
+     * cuestionario se cerrara solo a media pregunta en cuanto llegaba el perfil del
+     * servidor —el registro ya pide el nombre—.
+     *
+     * Los tres hechos que lo encienden: la marca guardada en el telefono, terminar el
+     * cuestionario, y que el servidor diga que esta cuenta ya tiene fecha de inicio.
+     */
     var isOnboarded: Boolean by mutableStateOf(false)
         private set
 
     val checkIns = mutableStateListOf<CheckInEntry>()
     val diaryEntries = mutableStateListOf<DiaryEntry>()
-    val aiMessages = mutableStateListOf<AiMessage>()
     val moodEntries = mutableStateListOf<MoodEntry>()
 
     /** Alertas del protocolo de emergencia que creó el servidor. */
@@ -257,7 +268,6 @@ class AppState(
     val habitTracker = HabitTracker()
     val sentimentAnalyzer = SentimentAnalyzer()
     val planificadorDeAvisos = PlanificadorDeAvisos()
-    val aiConversationService = AiConversationService(graph.aiProvider)
 
     // ---- Comunidad ---------------------------------------------------------------
     //
@@ -308,19 +318,64 @@ class AppState(
         start()
     }
 
+    // ---- Recuperacion de contraseña ----------------------------------------------
+
+    /** Paso en el que va la recuperacion; null cuando la pantalla no esta abierta. */
+    var recuperacion: EstadoDeRecuperacion? by mutableStateOf(null)
+        private set
+
+    fun abrirRecuperacion(email: String) {
+        recuperacion = EstadoDeRecuperacion(email = email)
+    }
+
+    fun cerrarRecuperacion() {
+        recuperacion = null
+    }
+
     /**
-     * Apunta la app a otro servidor y lo recuerda.
+     * Pide el codigo por correo.
      *
-     * Surte efecto en la siguiente petición, sin reiniciar: el cliente HTTP lee la
-     * dirección cada vez. Se vuelve a arrancar la sesión porque los tokens del servidor
-     * anterior no valen en el nuevo.
+     * Se avanza al paso del codigo pase lo que pase con cuentas inexistentes, porque el
+     * servidor responde igual exista o no: decir "ese correo no tiene cuenta" convertiria
+     * esta pantalla en una forma de averiguar quien usa una app de adicciones.
      */
-    fun useServerUrl(url: String) {
-        ApiConfig.baseUrl = url
+    fun pedirCodigoDeRecuperacion() {
+        val actual = recuperacion ?: return
+        if (actual.enviando) return
+        recuperacion = actual.copy(enviando = true, error = null)
         scope.launch {
-            preferences?.saveServerUrl(url)
-            isLoading = true
-            start()
+            runCatching { authRepository.requestPasswordReset(actual.email) }
+                .onSuccess {
+                    recuperacion = recuperacion?.copy(enviando = false, codigoEnviado = true)
+                }
+                .onFailure { error ->
+                    recuperacion = recuperacion?.copy(
+                        enviando = false,
+                        // Que al servidor le falte el correo no es culpa de quien lo pulsa,
+                        // y merece una explicacion distinta de "algo salio mal".
+                        sinCorreoEnElServidor = error is ApiException && error.isServiceMissing,
+                        error = error.toUserMessage(),
+                    )
+                }
+        }
+    }
+
+    fun cambiarContrasena(codigo: String, nueva: String) {
+        val actual = recuperacion ?: return
+        if (actual.enviando) return
+        recuperacion = actual.copy(enviando = true, error = null)
+        scope.launch {
+            runCatching { authRepository.resetPassword(actual.email, codigo, nueva) }
+                .onSuccess {
+                    recuperacion = null
+                    // Se entra sola: pedirle la contraseña que acaba de escribir seria
+                    // hacerle repetir un paso que la app ya conoce.
+                    authenticate { authRepository.login(actual.email, nueva) }
+                    notify("Contraseña cambiada")
+                }
+                .onFailure { error ->
+                    recuperacion = recuperacion?.copy(enviando = false, error = error.toUserMessage())
+                }
         }
     }
 
@@ -357,9 +412,12 @@ class AppState(
             uid = null
             session = null
             isOnboarded = false
-            needsAuth = true
-            isLoading = false
+            // Sin servidor no hay pantalla de entrada a la que volver: se abre una cuenta
+            // local nueva, que es lo que "empezar de cero" significa en la beta.
+            needsAuth = !modoLocal
+            isLoading = modoLocal
             profile = UserProfile(userId = "", displayName = "", sobrietyStartDate = Clock.System.now())
+            if (modoLocal) start()
         }
     }
 
@@ -380,6 +438,14 @@ class AppState(
         isLoading = false
 
         startMirrors()
+
+        // En la beta local no hay a quien preguntar ni quien avise: la pantalla ya tiene
+        // todo lo que existe, que es lo que hay en SQLite.
+        if (modoLocal) {
+            reprogramarAvisos()
+            return
+        }
+
         observarConexion()
         refreshAll()
         listenToServerEvents()
@@ -436,7 +502,6 @@ class AppState(
                         addiction = loaded.addiction ?: profile.addiction,
                         savingsGoal = loaded.savingsGoal ?: profile.savingsGoal,
                     )
-                    isOnboarded = loaded.displayName.isNotBlank()
                 }
             }
         }
@@ -452,10 +517,17 @@ class AppState(
             }
         }
         mirrorJobs += scope.launch { perfilRepository.savedAmount.collect { savedAmount = it } }
+        // Solo puede encender la bandera, nunca apagarla: si el servidor tarda en
+        // contestar mientras alguien esta a medio cuestionario, la respuesta que llega no
+        // puede cerrarselo en la cara.
+        mirrorJobs += scope.launch {
+            perfilRepository.onboardingCompleto.collect { completo ->
+                if (completo) isOnboarded = true
+            }
+        }
         mirrorJobs += scope.launch { mirror(checkInRepository.items, checkIns) }
         mirrorJobs += scope.launch { mirror(diaryRepository.items, diaryEntries) }
         mirrorJobs += scope.launch { mirror(moodRepository.items, moodEntries) }
-        mirrorJobs += scope.launch { mirror(aiMessageRepository.items, aiMessages) }
         mirrorJobs += scope.launch { mirror(alertRepository.items, alerts) }
         mirrorJobs += scope.launch {
             trafficLightRepository.current.collect { nivel ->
@@ -465,7 +537,6 @@ class AppState(
                 if (cambio) reprogramarAvisos(avisarAhora = nivel == RiskLevel.ROJO)
             }
         }
-        mirrorJobs += scope.launch { aiMessageRepository.isAvailable.collect { isAiAvailable = it } }
         mirrorJobs += scope.launch { graph.sync.estado.collect { syncState = it } }
         mirrorJobs += scope.launch { graph.outbox.pendientes.collect { pendingChanges = it } }
         mirrorJobs += scope.launch { graph.local.sinEnviar.collect { unsyncedIds = it } }
@@ -502,7 +573,6 @@ class AppState(
         checkIns.clear()
         diaryEntries.clear()
         moodEntries.clear()
-        aiMessages.clear()
         alerts.clear()
     }
 
@@ -531,7 +601,6 @@ class AppState(
         loadOrWarn("tus alertas") { alertRepository.refresh() }
         loadOrWarn("tu diario") { diaryRepository.refresh() }
         loadOrWarn("tus ánimos") { moodRepository.refresh() }
-        loadOrWarn("la conversación") { aiMessageRepository.refresh() }
         loadOrWarn("tu historial de recaídas") { relapseRepository.refresh() }
         loadOrWarn("tus recordatorios") { reminderRepository.refresh() }
         loadOrWarn("tus estadísticas") { statsRepository.refresh() }
@@ -800,6 +869,14 @@ class AppState(
         contactName: String,
         contactPhone: String,
         addiction: AddictionType?,
+        contactRole: SupportRole = SupportRole.FAMILIAR,
+        /** El "por qué" personal. Es el único campo de texto libre que guarda el servidor. */
+        personalWhy: String = "",
+        savingsGoalTitle: String = "",
+        savingsGoalAmount: Double? = null,
+        habitualTriggers: List<Trigger> = emptyList(),
+        wantsDailyReminder: Boolean = true,
+        reminderHour: Int = 21,
     ) {
         val now = Clock.System.now()
         profile = profile.copy(
@@ -807,10 +884,27 @@ class AppState(
             sobrietyStartDate = Instant.fromEpochSeconds(now.epochSeconds - daysSober * SECONDS_PER_DAY),
             recordStreakSeconds = recordDays * SECONDS_PER_DAY,
             previousDailyExpense = previousDailyExpense,
-            trustedContact = if (contactName.isBlank()) null else TrustedContact(contactName, contactPhone),
+            trustedContact = if (contactName.isBlank()) {
+                null
+            } else {
+                TrustedContact(contactName, contactPhone, contactRole)
+            },
             addiction = addiction,
+            personalWhy = personalWhy.trim(),
+            // Una meta sin monto no se puede dibujar como progreso, así que hacen falta las dos.
+            savingsGoal = if (savingsGoalTitle.isBlank() || savingsGoalAmount == null) {
+                null
+            } else {
+                SavingsGoal(savingsGoalTitle.trim(), savingsGoalAmount)
+            },
+            habitualTriggers = habitualTriggers,
         )
         isOnboarded = true
+
+        // El recordatorio se guarda por su propia ruta, no con el perfil. Se hace aquí y no
+        // en la pantalla para que la elección de la persona valga desde el primer día en
+        // vez de esperar a que alguien entre en Configuración.
+        settings = settings.copy(dailyReminders = wantsDailyReminder, reminderHour = reminderHour)
         val onboarded = profile
         scope.launch {
             // Primero al teléfono, y solo después se intenta el servidor: quien completa
@@ -821,6 +915,35 @@ class AppState(
                 perfilRepository.saveTracker(onboarded)
                 if (onboarded.trustedContact != null) perfilRepository.saveContacts(onboarded)
             }.onFailure { dataWarning = "No se pudo guardar tu perfil: ${it.toUserMessage()}" }
+            runCatching {
+                reminderRepository.save(
+                    Reminder(
+                        enabled = wantsDailyReminder,
+                        hour = reminderHour,
+                        minute = 0,
+                        timeZone = TimeZone.currentSystemDefault().id,
+                    ),
+                )
+            }
+
+            // El permiso se pide aquí, al terminar el cuestionario, y no escondido en
+            // Configuración. Los avisos son la mitad del acompañamiento: una app que nunca
+            // los pide solo sirve los días en que la persona se acuerda de abrirla, que son
+            // justo los días en los que menos falta hace.
+            //
+            // Se pide después de haber explicado para qué son y de que la persona haya
+            // elegido su hora, no nada más abrir: así el cuadro del sistema aparece cuando
+            // ya se sabe qué se está aceptando.
+            if (wantsDailyReminder) {
+                if (notificador.pedirPermiso()) {
+                    reprogramarAvisos()
+                } else {
+                    dataWarning = "Sin permiso de notificaciones no podremos recordarte " +
+                        "nada. Puedes darlo luego desde Configuración."
+                }
+            } else {
+                runCatching { notificador.cancelarTodo() }
+            }
             if (isOnline) runCatching { perfilRepository.refresh() }
         }
     }
@@ -885,11 +1008,6 @@ class AppState(
         }
     }
 
-    /** Pinta el mensaje en la conversación; el servidor es quien guarda el historial. */
-    fun registerAiMessage(message: AiMessage) {
-        aiMessageRepository.appendLocal(message)
-    }
-
     /**
      * Registra la recaída en el servidor, que reinicia la racha y conserva el récord.
      *
@@ -927,8 +1045,12 @@ class AppState(
             runCatching { graph.local.borrarTodo() }
             preferences?.clear()
             notify(
-                "Se borró tu diario y se cerró la sesión. Tu historial de check-ins sigue " +
-                    "en el servidor: para eliminarlo hay que pedirlo directamente.",
+                if (modoLocal) {
+                    "Se borró todo lo que había en este teléfono."
+                } else {
+                    "Se borró tu diario y se cerró la sesión. Tu historial de check-ins " +
+                        "sigue en el servidor: para eliminarlo hay que pedirlo directamente."
+                },
             )
             signOut()
         }

@@ -28,6 +28,25 @@ data class RegisterRequest(
     val displayName: String,
 )
 
+/**
+ * Peticion de codigo de recuperacion.
+ *
+ * El servidor responde igual exista o no la cuenta: contestar distinto convertiria esta
+ * ruta en una forma de averiguar quien tiene cuenta en una app de adicciones.
+ */
+@Serializable
+data class ForgotPasswordRequest(
+    val email: String,
+)
+
+/** Cambio de contraseña con el codigo que llego por correo. */
+@Serializable
+data class ResetPasswordRequest(
+    val email: String,
+    val code: String,
+    val password: String,
+)
+
 @Serializable
 data class RefreshRequest(
     val refreshToken: String,
@@ -264,23 +283,8 @@ data class RiskTrendsDto(
 
 // ---- IA ------------------------------------------------------------------------
 
-@Serializable
-data class ChatRequest(val prompt: String)
 
-@Serializable
-data class ChatResponse(
-    val reply: String = "",
-    val savedAlertId: String? = null,
-)
 
-@Serializable
-data class AiMessageDto(
-    val id: String = "",
-    val role: String = "USUARIO",
-    val content: String = "",
-    val riskLevelContext: String? = null,
-    val createdAt: String? = null,
-)
 
 // ---- Terapeuta -----------------------------------------------------------------
 

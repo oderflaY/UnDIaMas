@@ -1,7 +1,5 @@
 package com.eter.undiamas.core.data.api
 
-import com.eter.undiamas.core.domain.model.AiMessage
-import com.eter.undiamas.core.domain.model.AiMessageRole
 import com.eter.undiamas.core.domain.model.CheckInEntry
 import com.eter.undiamas.core.domain.model.Mood
 import com.eter.undiamas.core.domain.model.MoodEntry
@@ -52,9 +50,6 @@ fun Set<Trigger>.toApiTriggers(): List<String> = map { it.name }
 fun String?.toSupportRole(): SupportRole =
     SupportRole.entries.firstOrNull { it.name.equals(this, ignoreCase = true) } ?: SupportRole.FAMILIAR
 
-fun String?.toAiRole(): AiMessageRole =
-    AiMessageRole.entries.firstOrNull { it.name.equals(this, ignoreCase = true) }
-        ?: AiMessageRole.ASISTENTE
 
 // ---- Check-ins ------------------------------------------------------------------
 
@@ -97,15 +92,6 @@ fun MoodDto.toDomain(userId: String): MoodEntry = MoodEntry(
     userId = userId,
     mood = mood.toMood(),
     registeredAt = createdAt.toInstantOrNow(),
-)
-
-fun AiMessageDto.toDomain(userId: String): AiMessage = AiMessage(
-    id = id,
-    userId = userId,
-    role = role.toAiRole(),
-    content = content,
-    riskLevelContext = riskLevelContext?.toRiskLevel(),
-    sentAt = createdAt.toInstantOrNow(),
 )
 
 fun RelapseDto.toDomain(userId: String): RelapseEvent = RelapseEvent(

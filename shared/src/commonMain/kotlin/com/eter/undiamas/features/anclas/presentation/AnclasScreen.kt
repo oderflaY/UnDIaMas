@@ -47,7 +47,7 @@ import com.eter.undiamas.core.presentation.components.InterceptBack
 import com.eter.undiamas.core.presentation.components.SectionHeaderLarge
 import com.eter.undiamas.core.presentation.components.pressable
 import com.eter.undiamas.core.presentation.icon
-import com.eter.undiamas.core.presentation.theme.AccentAsistente
+import com.eter.undiamas.core.presentation.theme.AccentMagenta
 import com.eter.undiamas.core.presentation.theme.AccentPerfil
 import com.eter.undiamas.core.presentation.theme.AppIcons
 import com.eter.undiamas.core.presentation.theme.PrimaryVioletStart
@@ -56,7 +56,7 @@ import com.eter.undiamas.core.presentation.theme.SavingsGoldEnd
 import com.eter.undiamas.features.anclas.domain.Anchor
 import com.eter.undiamas.features.anclas.domain.AnchorKind
 
-private val anchorColors = listOf(PrimaryVioletStart, RiskGreen, SavingsGoldEnd, AccentPerfil, AccentAsistente)
+private val anchorColors = listOf(PrimaryVioletStart, RiskGreen, SavingsGoldEnd, AccentPerfil, AccentMagenta)
 
 /** Alturas alternadas para que el mosaico no quede uniforme. */
 private val tileHeights = listOf(150, 200, 170, 230, 185)

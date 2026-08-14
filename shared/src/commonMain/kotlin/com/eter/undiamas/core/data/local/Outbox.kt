@@ -50,7 +50,17 @@ data class Pendiente(
  * 3. **Nada caduca solo.** Un mensaje de hace tres días sigue siendo el registro de un día
  *    de esa persona.
  */
-class Outbox(private val db: UndiamasDatabase) {
+class Outbox(
+    private val db: UndiamasDatabase,
+    /**
+     * Si hay a donde enviar.
+     *
+     * En la beta local es false: sin servidor, la cola solo crecería para siempre con
+     * cambios que nadie va a recoger, y la pantalla mostraría un "pendiente de enviar"
+     * permanente que no describe nada real.
+     */
+    private val activa: Boolean = true,
+) {
 
     private val _pendientes = MutableStateFlow(0)
 
@@ -63,8 +73,9 @@ class Outbox(private val db: UndiamasDatabase) {
         }
     }
 
-    /** Encola una operación y devuelve su número de orden. */
+    /** Encola una operación y devuelve su número de orden, o 0 si la cola está apagada. */
     suspend fun encolar(tipo: TipoPendiente, carga: String, idLocal: String? = null): Long {
+        if (!activa) return 0L
         val seq = db.transaccion { conn ->
             conn.ejecutar(
                 "INSERT INTO outbox (tipo, carga, id_local, creado_en) VALUES (?, ?, ?, ?)",

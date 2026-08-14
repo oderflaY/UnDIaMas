@@ -39,7 +39,7 @@ import com.eter.undiamas.core.presentation.components.BubblePopGame
 import com.eter.undiamas.core.presentation.components.SectionCard
 import com.eter.undiamas.core.presentation.components.pressable
 import com.eter.undiamas.core.presentation.rememberPhoneDialer
-import com.eter.undiamas.core.presentation.theme.AccentAsistente
+import com.eter.undiamas.core.presentation.theme.AccentMagenta
 import com.eter.undiamas.core.presentation.theme.EmergencyCoralEnd
 import com.eter.undiamas.core.presentation.theme.EmergencyCoralStart
 import com.eter.undiamas.core.presentation.theme.PrimaryVioletStart
@@ -178,7 +178,7 @@ fun EmergenciaScreen(state: AppState, navigator: Navigator) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     BubblePopGame(
-                        colors = listOf(EmergencyCoralStart, PrimaryVioletStart, AccentAsistente, RiskGreen),
+                        colors = listOf(EmergencyCoralStart, PrimaryVioletStart, AccentMagenta, RiskGreen),
                         modifier = Modifier.fillMaxWidth().height(280.dp),
                         onPop = { popped = it },
                     )

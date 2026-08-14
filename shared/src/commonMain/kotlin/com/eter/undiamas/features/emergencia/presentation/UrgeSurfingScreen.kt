@@ -48,7 +48,7 @@ import com.eter.undiamas.core.presentation.components.BubblePopGame
 import com.eter.undiamas.core.presentation.components.CountdownRing
 import com.eter.undiamas.core.presentation.components.GuardedBack
 import com.eter.undiamas.core.presentation.components.pressable
-import com.eter.undiamas.core.presentation.theme.AccentAsistente
+import com.eter.undiamas.core.presentation.theme.AccentMagenta
 import com.eter.undiamas.core.presentation.theme.AppIcons
 import com.eter.undiamas.core.presentation.theme.EmergencyCoralStart
 import com.eter.undiamas.core.presentation.theme.PrimaryVioletStart
@@ -229,7 +229,7 @@ fun UrgeSurfingScreen(state: AppState, navigator: Navigator) {
                     color = Color.White.copy(alpha = 0.7f),
                 )
                 BubblePopGame(
-                    colors = listOf(EmergencyCoralStart, PrimaryVioletStart, AccentAsistente, RiskGreen),
+                    colors = listOf(EmergencyCoralStart, PrimaryVioletStart, AccentMagenta, RiskGreen),
                     modifier = Modifier.fillMaxWidth().height(300.dp),
                 )
             }

@@ -30,7 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.eter.undiamas.core.presentation.theme.AppIcons
+import com.eter.undiamas.core.presentation.components.LogoUnDiaMas
 import com.eter.undiamas.core.presentation.theme.SplashBrush
 import kotlinx.coroutines.delay
 
@@ -92,12 +92,9 @@ fun SplashScreen(
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = AppIcons.Sol,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(52.dp),
-                )
+                // El logo de verdad, no un icono parecido: es lo primero que se ve al
+                // abrir y lo mismo que la persona acaba de tocar en su lanzador.
+                LogoUnDiaMas(size = 60.dp)
             }
 
             Text(

@@ -28,4 +28,15 @@ interface AuthRepository {
 
     /** Cierra la sesion en todos los dispositivos e invalida los tokens guardados. */
     suspend fun logout()
+
+    /**
+     * Pide un codigo de recuperacion al correo indicado.
+     *
+     * Lanza [com.eter.undiamas.core.data.api.ApiException] con `isServiceMissing` si el
+     * servidor no tiene correo configurado, que es un caso normal y no un fallo.
+     */
+    suspend fun requestPasswordReset(email: String)
+
+    /** Cambia la contraseña con el codigo recibido por correo. */
+    suspend fun resetPassword(email: String, code: String, newPassword: String)
 }

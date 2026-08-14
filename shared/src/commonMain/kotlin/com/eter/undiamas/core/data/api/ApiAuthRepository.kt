@@ -65,6 +65,11 @@ class ApiAuthRepository(
         sessionCache.clear()
     }
 
+    override suspend fun requestPasswordReset(email: String) = api.forgotPassword(email)
+
+    override suspend fun resetPassword(email: String, code: String, newPassword: String) =
+        api.resetPassword(email, code, newPassword)
+
     private suspend fun cerrarLocalmente() {
         tokenStore.clear()
         api.http.forgetCachedToken()

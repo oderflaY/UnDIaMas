@@ -39,7 +39,6 @@ class UserPreferences(
         val displayName = stringPreferencesKey("USER_DISPLAY_NAME")
         val accessToken = stringPreferencesKey("AUTH_ACCESS_TOKEN")
         val refreshToken = stringPreferencesKey("AUTH_REFRESH_TOKEN")
-        val serverUrl = stringPreferencesKey("SERVER_BASE_URL")
         val sessionUserId = stringPreferencesKey("SESSION_USER_ID")
         val sessionEmail = stringPreferencesKey("SESSION_EMAIL")
         val sessionName = stringPreferencesKey("SESSION_NAME")
@@ -89,19 +88,6 @@ class UserPreferences(
             prefs[Keys.accessToken] = accessToken
             prefs[Keys.refreshToken] = refreshToken
         }
-    }
-
-    /**
-     * Dirección del backend escrita a mano, o null para usar la de fábrica.
-     *
-     * Se guarda aparte de los tokens porque no es un dato de la persona: es a qué máquina
-     * apunta esta instalación, y tiene que sobrevivir a cerrar sesión.
-     */
-    suspend fun readServerUrl(): String? =
-        preferences.first()[Keys.serverUrl]?.takeIf { it.isNotBlank() }
-
-    suspend fun saveServerUrl(url: String) {
-        store.edit { prefs -> prefs[Keys.serverUrl] = url }
     }
 
     /**

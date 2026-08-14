@@ -30,7 +30,19 @@ private const val CLAVE_DUENIO = "usuario_duenio"
  * cientos de filas, no millones, y a cambio no hace falta ningún mecanismo de invalidación
  * parcial que se pueda desincronizar sin que nadie lo note.
  */
-class LocalStore(private val db: UndiamasDatabase) {
+class LocalStore(
+    private val db: UndiamasDatabase,
+    /**
+     * Si lo guardado queda marcado como "todavía no está en el servidor".
+     *
+     * En la beta local es false: no hay servidor al que subir nada, así que marcarlo todo
+     * como pendiente dejaría a la app avisando para siempre de una espera que no existe.
+     */
+    private val marcarPendientes: Boolean = true,
+) {
+
+    /** 1 solo si el dato está esperando a salir de verdad hacia algún sitio. */
+    private fun marca(pendiente: Boolean): Long = if (pendiente && marcarPendientes) 1L else 0L
 
     private val _checkIns = MutableStateFlow<List<CheckInEntry>>(emptyList())
     val checkIns: StateFlow<List<CheckInEntry>> = _checkIns.asStateFlow()
@@ -142,7 +154,7 @@ class LocalStore(private val db: UndiamasDatabase) {
                 stmt.bindText(6, entrada.note)
                 stmt.bindText(7, apiJson.encodeToString(entrada.answers))
                 stmt.bindLong(8, entrada.answeredAt.toEpochMilliseconds())
-                stmt.bindLong(9, if (pendiente) 1 else 0)
+                stmt.bindLong(9, marca(pendiente))
             }
         }
         recargarCheckIns()
@@ -218,7 +230,7 @@ class LocalStore(private val db: UndiamasDatabase) {
                 stmt.bindText(1, entrada.id)
                 stmt.bindText(2, entrada.text)
                 stmt.bindLong(3, entrada.createdAt.toEpochMilliseconds())
-                stmt.bindLong(4, if (pendiente) 1 else 0)
+                stmt.bindLong(4, marca(pendiente))
             }
         }
         recargarDiario()
@@ -279,7 +291,7 @@ class LocalStore(private val db: UndiamasDatabase) {
                 stmt.bindText(1, entrada.id)
                 stmt.bindText(2, entrada.mood.name)
                 stmt.bindLong(3, entrada.registeredAt.toEpochMilliseconds())
-                stmt.bindLong(4, if (pendiente) 1 else 0)
+                stmt.bindLong(4, marca(pendiente))
             }
         }
         recargarAnimos()
@@ -336,7 +348,7 @@ class LocalStore(private val db: UndiamasDatabase) {
                 stmt.bindText(2, evento.notes.orEmpty())
                 stmt.bindText(3, detonantes.joinToString(","))
                 stmt.bindLong(4, evento.occurredAt.toEpochMilliseconds())
-                stmt.bindLong(5, if (pendiente) 1 else 0)
+                stmt.bindLong(5, marca(pendiente))
             }
         }
         recargarRecaidas()
@@ -459,7 +471,7 @@ class LocalStore(private val db: UndiamasDatabase) {
                 stmt.bindLong(4, entrada.triggerLevel.toLong())
                 stmt.bindText(5, entrada.suggestedActions.joinToString("|"))
                 stmt.bindLong(6, creadoEn)
-                stmt.bindLong(7, if (pendiente) 1 else 0)
+                stmt.bindLong(7, marca(pendiente))
             }
         }
         recargarSemaforo()

@@ -8,28 +8,22 @@
     <!-- Recordatorios de racha, anclas y ahorro, y los avisos de apoyo en semáforo rojo. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Lectura de la pulsera vía Health Connect: solo lo que consume el análisis. -->
-    <uses-permission android:name="android.permission.health.READ_STEPS" />
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
-
     <!-- Visibilidad de la app de teléfono para el protocolo de emergencia (Android 11+). -->
     <queries>
         <intent>
             <action android:name="android.intent.action.DIAL" />
             <data android:scheme="tel" />
         </intent>
-        <!-- Visibilidad del proveedor de Health Connect (Android 13 y anteriores). -->
-        <package android:name="com.google.android.apps.healthdata" />
     </queries>
 
-    <!-- El tráfico sin cifrar solo se permite en debug, donde el backend local habla http
-         en la wifi. En release el valor es false: el historial de recaídas de alguien no
-         puede viajar en claro por una wifi pública. Lo fija el buildType en Gradle. -->
+    <!-- Nunca se acepta tráfico sin cifrar: la app habla solo https con su servidor, y
+         el historial de recaídas de alguien no puede viajar en claro por una wifi
+         pública. -->
     <!-- Sin copia de seguridad automática: aquí hay tokens de sesión y el historial local
          de recaídas y de diario. No puede acabar en el Drive de nadie ni restaurarse en
          otro teléfono sin volver a iniciar sesión. -->
     <application
-        android:usesCleartextTraffic="${usesCleartextTraffic}"
+        android:usesCleartextTraffic="false"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="false"
@@ -46,30 +40,12 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Health Connect abre esta pantalla cuando la persona pide ver por qué
-                 la app quiere sus datos (Android 13 y anteriores). Va en MainActivity
-                 porque es la única Activity: toda la UI es Compose dentro de ella. -->
-            <intent-filter>
-                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
-            </intent-filter>
         </activity>
 
         <!-- Publica los avisos programados. No exportado: solo lo dispara nuestra alarma. -->
         <receiver
             android:name=".avisos.AvisoReceiver"
             android:exported="false" />
-
-        <!-- Mismo rationale para Android 14+, que usa esta acción del sistema. -->
-        <activity-alias
-            android:name="ViewPermissionUsageActivity"
-            android:exported="true"
-            android:targetActivity=".MainActivity"
-            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
-                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
-            </intent-filter>
-        </activity-alias>
     </application>
 
 </manifest>

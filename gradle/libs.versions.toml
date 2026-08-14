@@ -17,7 +17,6 @@ kotlinx-datetime = "0.7.1"
 kotlinx-coroutines = "1.10.1"
 material3 = "1.11.0-alpha07"
 materialIcons = "1.7.3"
-healthConnect = "1.1.0"
 datastore = "1.1.7"
 ktor = "3.5.2"
 androidxSqlite = "2.7.0"
@@ -46,7 +45,6 @@ compose-components-resources = { module = "org.jetbrains.compose.components:comp
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 compose-materialIconsExtended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIcons" }
 compose-uiBackHandler = { module = "org.jetbrains.compose.ui:ui-backhandler", version.ref = "composeMultiplatform" }
-androidx-healthConnect = { module = "androidx.health.connect:connect-client", version.ref = "healthConnect" }
 androidx-datastorePreferences = { module = "androidx.datastore:datastore-preferences-core", version.ref = "datastore" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-contentNegotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }

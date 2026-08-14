@@ -16,9 +16,6 @@ dependencies {
 
     implementation(libs.androidx.activity.compose)
 
-    // Lectura de la pulsera vía Health Connect (Android-only: por eso vive aquí y no en :shared).
-    implementation(libs.androidx.healthConnect)
-
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)
 }
@@ -67,18 +64,44 @@ android {
 
     buildTypes {
         debug {
-            // El backend de desarrollo habla http:// en la red local, que Android bloquea
-            // por defecto. Esta excepción existe SOLO en debug.
-            manifestPlaceholders["usesCleartextTraffic"] = "true"
-            buildConfigField("boolean", "PERMITE_CAMBIAR_SERVIDOR", "true")
-            buildConfigField("String", "API_BASE_URL", "\"${servidorDeDesarrollo()}\"")
+            buildConfigField("boolean", "MODO_LOCAL", "false")
         }
+
+        /**
+         * Beta para repartir: la app entera sin backend, guardando en el teléfono.
+         *
+         * Se firma con la clave de depuración a propósito, para que salga un APK
+         * instalable sin montar un keystore. El sufijo del id la deja convivir con la app
+         * de verdad en el mismo teléfono, que es justo lo que hace falta para compararlas.
+         */
+        create("beta") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".beta"
+            versionNameSuffix = "-beta-local"
+            buildConfigField("boolean", "MODO_LOCAL", "true")
+
+            // No depurable aunque venga de debug. Aquí dentro hay diario e historial de
+            // recaídas: con `debuggable` cualquiera con el teléfono en la mano puede
+            // sacarlos por adb sin desbloquear nada.
+            isDebuggable = false
+
+            // Se minifica como la de verdad. Es lo que baja el APK de 78 MB a algo que se
+            // puede mandar por mensajería, y de paso hace que la beta pruebe las mismas
+            // reglas de R8 que acabarán en la tienda.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+
+            // x86 solo lo usan los emuladores: en un APK para repartir son 2 MB de
+            // librería de SQLite que ningún teléfono va a abrir.
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+        }
+
         release {
-            // Sin esto la app publicada aceptaría tráfico sin cifrar, y el historial de
-            // recaídas de alguien viajaría en claro por cualquier wifi pública.
-            manifestPlaceholders["usesCleartextTraffic"] = "false"
-            buildConfigField("boolean", "PERMITE_CAMBIAR_SERVIDOR", "false")
-            buildConfigField("String", "API_BASE_URL", "\"${servidorDeProduccion()}\"")
+            buildConfigField("boolean", "MODO_LOCAL", "false")
 
             isMinifyEnabled = true
             isShrinkResources = true
@@ -96,44 +119,22 @@ android {
     }
     buildFeatures {
         compose = true
+        // Solo para MODO_LOCAL: es lo que separa la beta local de la app de verdad.
         buildConfig = true
     }
 }
 
 /**
- * Dirección del backend en desarrollo.
- *
- * Se puede cambiar sin tocar el repositorio poniendo `undiamas.apiUrl=http://...` en
- * `local.properties`, que es donde va la configuración de cada máquina.
- */
-fun servidorDeDesarrollo(): String =
-    (project.findProperty("undiamas.apiUrl") as String?) ?: "http://192.168.1.145:8080"
-
-/**
- * Dirección del backend en producción.
- *
- * Tiene que ser https: la app publicada no acepta tráfico sin cifrar. Se define con
- * `undiamas.apiUrlProd=https://...` en `local.properties` o como propiedad de Gradle en el
- * servidor de compilación.
- */
-fun servidorDeProduccion(): String =
-    (project.findProperty("undiamas.apiUrlProd") as String?) ?: "https://api.undiamas.mx"
-
-/**
  * Avisa antes de publicar algo que no funcionaría.
  *
- * Un release sin firmar no se puede subir, y uno apuntando a la dirección de ejemplo se
- * instalaría bien y luego no conectaría con nada — que es peor, porque el fallo aparece en
- * el teléfono de alguien y no en la consola de quien compila.
+ * Un release sin firmar no se puede subir a Play, y el fallo no aparece hasta el final de
+ * una compilación larga si nadie lo dice antes.
  */
 // Los avisos se calculan al configurar, no al ejecutar: leer `project` dentro de un
 // `doFirst` rompe la caché de configuración de Gradle.
 val avisosDeRelease: List<String> = buildList {
     if (!hayFirma) {
         add("no hay keystore.properties: el artefacto saldrá SIN FIRMAR y Play lo rechazará")
-    }
-    if (project.findProperty("undiamas.apiUrlProd") == null) {
-        add("undiamas.apiUrlProd no está definida: se usará ${servidorDeProduccion()}")
     }
 }
 

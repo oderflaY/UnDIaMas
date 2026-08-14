@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.domain.model.Trigger
+import com.eter.undiamas.core.domain.model.triggersInOrder
 import com.eter.undiamas.core.presentation.AppState
 import com.eter.undiamas.core.presentation.components.pressable
 import com.eter.undiamas.core.presentation.icon
@@ -110,7 +111,7 @@ fun DialogoDeRecaida(state: AppState, onCerrar: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Trigger.entries.forEach { detonante ->
+                    state.profile.triggersInOrder().forEach { detonante ->
                         val activo = detonante in detonantes
                         Surface(
                             shape = RoundedCornerShape(50),

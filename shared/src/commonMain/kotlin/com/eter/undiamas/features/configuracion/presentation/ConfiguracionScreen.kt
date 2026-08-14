@@ -30,11 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.eter.undiamas.core.presentation.AppState
+import com.eter.undiamas.core.presentation.PaginasLegales
 import com.eter.undiamas.core.presentation.ThemeMode
+import com.eter.undiamas.core.presentation.rememberLinkOpener
 import com.eter.undiamas.core.presentation.closeApp
-import androidx.compose.material3.OutlinedTextField
-import com.eter.undiamas.core.data.api.ApiConfig
-import com.eter.undiamas.core.data.api.isValidBaseUrl
 import com.eter.undiamas.core.presentation.components.SectionCard
 import com.eter.undiamas.core.presentation.components.pressable
 import com.eter.undiamas.core.presentation.theme.AccentDiario
@@ -58,6 +57,7 @@ fun ConfiguracionScreen(state: AppState) {
     var showLogout by remember { mutableStateOf(false) }
     var showPurge by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val abrirEnlace = rememberLinkOpener()
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -128,7 +128,23 @@ fun ConfiguracionScreen(state: AppState) {
             }
         }
 
-        SectionCard {
+        // Lo que pasa con los datos de alguien no puede quedar implícito, y en la beta la
+        // respuesta es la contraria a la de la app publicada: aquí no hay copia en ningún
+        // sitio, y desinstalar borra meses de diario sin vuelta atrás.
+        if (state.modoLocal) SectionCard {
+            SectionHeader(AppIcons.Bloqueado, "Versión de prueba", RiskYellow)
+            Text(
+                "Esta versión no se conecta a ningún servidor: todo lo que escribes se " +
+                    "guarda solo en este teléfono.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                "No hay copia de seguridad. Si desinstalas la app o borras sus datos, se " +
+                    "pierde tu historial. Tampoco viaja contigo si cambias de teléfono.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else SectionCard {
             SectionHeader(AppIcons.Perfil, "Cuenta", AccentDiario)
             Text(
                 state.session?.let { "Sesión activa: ${it.email}" }
@@ -144,29 +160,29 @@ fun ConfiguracionScreen(state: AppState) {
             )
         }
 
-        // Solo en debug, para probar en un teléfono físico contra el servidor de otra
-        // máquina de la wifi. En la app publicada no aparece: dejar que alguien reapunte la
-        // app a otro servidor es dejar que le roben la sesión y el historial.
-        if (ApiConfig.permiteCambiarServidor) SectionCard {
-            SectionHeader(AppIcons.Escudo, "Servidor", RiskYellow)
-            var serverUrl by remember { mutableStateOf(ApiConfig.baseUrl) }
-            OutlinedTextField(
-                value = serverUrl,
-                onValueChange = { serverUrl = it.trim() },
-                label = { Text("Dirección del backend") },
-                isError = serverUrl.isNotBlank() && !isValidBaseUrl(serverUrl),
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                singleLine = true,
+        // Play exige que estas dos páginas se puedan alcanzar desde dentro de la app y
+        // también sin instalarla. Van al dominio raíz porque api.undiamas.site solo sirve JSON.
+        if (!state.modoLocal) SectionCard {
+            SectionHeader(AppIcons.Escudo, "Tus datos", AccentDiario)
+            Text(
+                "Nada de lo que escribes se manda a servicios de terceros. Tu diario y tus " +
+                    "check-ins no salen del servidor de la app, y el análisis de texto " +
+                    "corre ahí dentro.",
+                style = MaterialTheme.typography.bodyMedium,
             )
-            Button(
-                onClick = {
-                    state.useServerUrl(serverUrl)
-                    state.notify("Conectando con $serverUrl")
-                },
-                enabled = isValidBaseUrl(serverUrl) && serverUrl != ApiConfig.baseUrl,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Usar esta dirección") }
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = { abrirEnlace(PaginasLegales.PRIVACIDAD) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Privacidad") }
+                OutlinedButton(
+                    onClick = { abrirEnlace(PaginasLegales.BORRAR_CUENTA) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Borrar cuenta") }
+            }
         }
 
         SectionCard {
@@ -176,10 +192,13 @@ fun ConfiguracionScreen(state: AppState) {
             }
         }
 
-        OutlinedButton(onClick = { showLogout = true }, modifier = Modifier.fillMaxWidth()) {
-            Icon(AppIcons.CerrarSesion, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
-            Text("Cerrar sesión")
+        // Sin servidor no hay sesión que cerrar: el botón no tendría nada que hacer.
+        if (!state.modoLocal) {
+            OutlinedButton(onClick = { showLogout = true }, modifier = Modifier.fillMaxWidth()) {
+                Icon(AppIcons.CerrarSesion, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(10.dp))
+                Text("Cerrar sesión")
+            }
         }
 
         // Zona de Seguridad: enmarcada y al final, para que nada aquí se toque por accidente.
@@ -224,8 +243,13 @@ fun ConfiguracionScreen(state: AppState) {
                     Text("Borrado de emergencia")
                 }
                 Text(
-                    "Borra tu diario y cierra la sesión en todos tus dispositivos. No se " +
-                        "puede deshacer.",
+                    if (state.modoLocal) {
+                        "Borra todo lo que hay en este teléfono. Como no hay servidor, " +
+                            "no queda copia de nada. No se puede deshacer."
+                    } else {
+                        "Borra tu diario y cierra la sesión en todos tus dispositivos. " +
+                            "No se puede deshacer."
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -258,9 +282,16 @@ fun ConfiguracionScreen(state: AppState) {
             title = { Text("¿Borrar y cerrar sesión?") },
             text = {
                 Text(
-                    "Se elimina tu diario del servidor y todo lo guardado en este teléfono, " +
-                        "y se cierra la sesión. Tus check-ins y tu historial de recaídas " +
-                        "siguen en el servidor: eliminarlos hay que pedirlo aparte.",
+                    if (state.modoLocal) {
+                        "Se borra todo lo guardado en este teléfono: diario, check-ins, " +
+                            "racha e historial de recaídas. No hay copia en ningún " +
+                            "servidor, así que no se puede recuperar."
+                    } else {
+                        "Se elimina tu diario del servidor y todo lo guardado en este " +
+                            "teléfono, y se cierra la sesión. Tus check-ins y tu historial " +
+                            "de recaídas siguen en el servidor: eliminarlos hay que " +
+                            "pedirlo aparte."
+                    },
                 )
             },
             confirmButton = {

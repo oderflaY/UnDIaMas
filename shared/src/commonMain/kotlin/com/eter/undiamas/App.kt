@@ -48,7 +48,6 @@ import com.eter.undiamas.features.emergencia.presentation.EmergenciaScreen
 import com.eter.undiamas.features.habitos.presentation.HabitosScreen
 import com.eter.undiamas.features.emergencia.presentation.UrgeSurfingScreen
 import com.eter.undiamas.features.estadisticas.presentation.EstadisticasScreen
-import com.eter.undiamas.features.ia.presentation.IaScreen
 import com.eter.undiamas.features.inicio.presentation.DashboardScreen
 import com.eter.undiamas.features.onboarding.presentation.OnboardingScreen
 import com.eter.undiamas.features.onboarding.presentation.IntroSlides
@@ -57,11 +56,8 @@ import com.eter.undiamas.features.perfil.presentation.PerfilScreen
 import com.eter.undiamas.features.splash.presentation.SplashScreen
 import com.eter.undiamas.features.sobriedad.presentation.SobrietyScreen
 import kotlinx.coroutines.launch
-import com.eter.undiamas.features.biometria.presentation.BiometriaScreen
-import com.eter.undiamas.core.domain.biometrics.BiometricsProvider
 import kotlinx.coroutines.flow.first
 import com.eter.undiamas.core.data.UserPreferences
-import com.eter.undiamas.core.data.api.ApiConfig
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -84,13 +80,14 @@ private val bottomTabs = listOf(
 @Composable
 @Preview
 fun App(
-    biometrics: BiometricsProvider? = null,
     preferences: UserPreferences? = null,
     notificador: Notificador = NotificadorInactivo(),
+    /** Beta sin backend: la variante de compilacion lo decide, la persona no. */
+    modoLocal: Boolean = false,
 ) {
     val state = remember {
         AppState(
-            biometricsProvider = biometrics,
+            modoLocal = modoLocal,
             preferences = preferences,
             notificador = notificador,
         )
@@ -103,12 +100,6 @@ fun App(
     // sin esta espera se vería el onboarding un instante aunque ya estuviera completo.
     LaunchedEffect(preferences) {
         if (preferences == null) return@LaunchedEffect
-        // Antes que nada: a qué servidor apunta esta instalación. Va aquí porque el cliente
-        // HTTP lee la dirección en cada petición, y la primera es la de recuperar la sesión.
-        // En release se ignora lo guardado: la dirección la fija la compilación y punto.
-        if (ApiConfig.permiteCambiarServidor) {
-            preferences.readServerUrl()?.let { ApiConfig.baseUrl = it }
-        }
         state.restoreFrom(
             completed = preferences.onboardingCompleted.first(),
             savedName = preferences.displayName.first(),
@@ -121,8 +112,8 @@ fun App(
     val scope = rememberCoroutineScope()
     state.onNotify = { message -> scope.launch { snackbarHostState.showSnackbar(message) } }
 
-    // Se espera a `restored` para no arrancar la sesión contra la dirección de fábrica
-    // cuando hay otra guardada: la primera petición ya debe salir al servidor correcto.
+    // Se espera a `restored` para no arrancar la sesión antes de saber si ya había uno
+    // dentro: así la primera petición sale con el token recuperado y no como anónima.
     LaunchedEffect(restored) { if (restored) state.start() }
 
     // El teléfono decide, salvo que la persona haya elegido explícitamente en Configuración.
@@ -189,6 +180,14 @@ fun App(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
+            return@UnDiaMasTheme
+        }
+
+        // En la beta local no hay pantalla de sesion, asi que las diapositivas de
+        // bienvenida entran aqui: quien abre la app por primera vez sigue sabiendo de que
+        // va antes de que se le pregunte nada.
+        if (!introVista && !state.isOnboarded) {
+            IntroSlides(onTerminar = { introVista = true })
             return@UnDiaMasTheme
         }
 
@@ -266,16 +265,14 @@ fun App(
                             Screen.Inicio -> DashboardScreen(state, navigator)
                             Screen.Sobriedad -> SobrietyScreen(state)
                             Screen.CheckIn -> CheckInScreen(state, navigator)
-                            Screen.Ia -> IaScreen(state)
                             Screen.Diario -> DiarioScreen(state)
-                            Screen.Estadisticas -> EstadisticasScreen(state, navigator)
+                            Screen.Estadisticas -> EstadisticasScreen(state)
                             Screen.Calculadora -> CalculadoraScreen(state)
                             Screen.Emergencia -> EmergenciaScreen(state, navigator)
                             Screen.UrgeSurfing -> UrgeSurfingScreen(state, navigator)
                             Screen.Capsulas -> CapsulasScreen(state)
                             Screen.Habitos -> HabitosScreen(state)
                             Screen.Anclas -> AnclasScreen(state)
-                            Screen.Biometria -> BiometriaScreen(state, navigator)
                             Screen.Perfil -> PerfilScreen(state, navigator)
                             Screen.EditarPerfil -> EditarPerfilScreen(state, onVolver = { navigator.back() })
                             Screen.Comunidad -> ComunidadScreen(state, navigator)

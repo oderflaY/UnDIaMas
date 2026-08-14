@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Silueta para los iconos temáticos de Android 13+, donde el sistema repinta el icono con
+    los colores del fondo de pantalla y solo respeta la forma.
+
+    Es el mismo dibujo en un solo color: sin esto, Android genera su propia silueta
+    recortando el icono a ciegas, y el resultado suele ser una mancha irreconocible.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#000000"
+        android:pathData="M38,50a16,16 0 1,0 32,0a16,16 0 1,0 -32,0z" />
+    <path
+        android:pathData="M32,48A22,22 0 0,1 76,48"
+        android:strokeColor="#000000"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M30,66Q42,61 54,66T78,66L78,78L30,78Z" />
+    <path
+        android:pathData="M68,34H76M72,30V38"
+        android:strokeColor="#000000"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+</vector>

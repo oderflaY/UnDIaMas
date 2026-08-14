@@ -58,6 +58,14 @@ import com.eter.undiamas.features.comunidad.domain.OrdenHistorias
  */
 @Composable
 fun ComunidadScreen(state: AppState, navigator: Navigator) {
+    // El muro es lo unico de la app que no puede funcionar sin servidor: son historias de
+    // otras personas, y no hay otras personas dentro de un telefono. Se dice tal cual en
+    // vez de dejar una pantalla girando o soltando un error de red.
+    if (state.modoLocal) {
+        ComunidadNoDisponible()
+        return
+    }
+
     val historias by state.comunidadHistorias
     val perfil by state.comunidadPerfil
     val cargando by state.comunidadCargando
@@ -128,6 +136,36 @@ fun ComunidadScreen(state: AppState, navigator: Navigator) {
                 state.reportarHistoria(historia, motivo)
                 historiaAReportar = null
             },
+        )
+    }
+}
+
+/** Lo que ve quien abre la comunidad en la beta local. */
+@Composable
+private fun ComunidadNoDisponible() {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(
+            AppIcons.Grupo,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(40.dp),
+        )
+        Text(
+            "La comunidad llega mas adelante",
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            "Esta version guarda todo en tu telefono y no se conecta a ningun servidor, " +
+                "asi que aqui todavia no hay historias de nadie mas. El resto de la app " +
+                "funciona entera.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
         )
     }
 }

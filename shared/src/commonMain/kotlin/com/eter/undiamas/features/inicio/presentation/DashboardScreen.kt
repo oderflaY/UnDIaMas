@@ -51,7 +51,7 @@ import com.eter.undiamas.core.presentation.icon
 import com.eter.undiamas.core.presentation.formatClock
 import com.eter.undiamas.core.presentation.greetingForHour
 import com.eter.undiamas.core.presentation.rememberNow
-import com.eter.undiamas.core.presentation.theme.AccentAsistente
+import com.eter.undiamas.core.presentation.theme.AccentMagenta
 import com.eter.undiamas.core.presentation.theme.AccentCream
 import com.eter.undiamas.core.presentation.theme.AccentDiario
 import com.eter.undiamas.core.presentation.theme.AccentPerfil
@@ -328,13 +328,11 @@ private fun RejillaDeHerramientas(navigator: Navigator, modifier: Modifier = Mod
     val herramientas = listOf(
         Herramienta(AppIcons.Record, "Mi racha", AccentOrange, Screen.Sobriedad),
         Herramienta(AppIcons.Ahorro, "Mi ahorro", RiskGreen, Screen.Calculadora),
-        Herramienta(AppIcons.Asistente, "Asistente", AccentAsistente, Screen.Ia),
         Herramienta(AppIcons.Habitos, "Hábitos", RiskGreen, Screen.Habitos),
         Herramienta(AppIcons.Ancla, "Mis anclas", AccentPerfil, Screen.Anclas),
         Herramienta(AppIcons.Capsula, "Cápsulas", BrandPurple, Screen.Capsulas),
         Herramienta(AppIcons.Diario, "Diario", AccentDiario, Screen.Diario),
-        Herramienta(AppIcons.Corazon, "Biometría", RiskRed, Screen.Biometria),
-        Herramienta(AppIcons.Grupo, "Comunidad", AccentAsistente, Screen.Comunidad),
+        Herramienta(AppIcons.Grupo, "Comunidad", AccentMagenta, Screen.Comunidad),
     )
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {

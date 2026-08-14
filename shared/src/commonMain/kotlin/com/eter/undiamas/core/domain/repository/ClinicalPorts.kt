@@ -1,6 +1,5 @@
 package com.eter.undiamas.core.domain.repository
 
-import com.eter.undiamas.core.domain.model.AiMessage
 import com.eter.undiamas.core.domain.model.CheckInEntry
 import com.eter.undiamas.core.domain.model.Mood
 import com.eter.undiamas.core.domain.model.MoodEntry
@@ -22,6 +21,15 @@ interface PerfilRepository {
     /** Racha y ahorro calculados por el servidor, que es quien tiene la fecha de inicio. */
     val streakSeconds: StateFlow<Long>
     val savedAmount: StateFlow<Double>
+
+    /**
+     * Si esta cuenta ya contesto el cuestionario inicial, segun el servidor.
+     *
+     * La señal es tener fecha de inicio de racha, porque solo la escribe el propio
+     * cuestionario: registrarse no la crea. Sirve para el caso de reinstalar la app o
+     * entrar desde otro telefono, donde no queda nada guardado en local.
+     */
+    val onboardingCompleto: StateFlow<Boolean>
 
     suspend fun refresh()
 
@@ -53,20 +61,6 @@ interface MoodRepository : RemoteList<MoodEntry> {
     suspend fun add(mood: Mood): MoodEntry
 }
 
-/**
- * Chat con el asistente.
- *
- * El historial lo guarda el servidor, no la app: en `/v1/ai/chat` solo viaja el texto. Por
- * eso aqui no hay forma de escribir la conversacion, solo de leerla y de pintar en local lo
- * que acaba de pasar mientras llega la confirmacion.
- */
-interface AiMessageRepository : RemoteList<AiMessage> {
-    /** false cuando el servidor arranco sin clave de IA: las rutas de chat no existen. */
-    val isAvailable: StateFlow<Boolean>
-
-    /** Muestra ya un mensaje en la conversacion; el servidor es quien lo persiste. */
-    fun appendLocal(message: AiMessage)
-}
 
 interface RelapseRepository : RemoteList<RelapseEvent> {
     /**

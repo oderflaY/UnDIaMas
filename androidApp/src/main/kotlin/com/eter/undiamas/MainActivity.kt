@@ -10,29 +10,20 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.health.connect.client.PermissionController
 import com.eter.undiamas.core.data.PREFERENCES_FILE
 import com.eter.undiamas.core.data.UserPreferences
-import com.eter.undiamas.core.data.api.ApiConfig
 import com.eter.undiamas.core.data.initPreferencesPath
 import com.eter.undiamas.core.data.local.DATABASE_FILE
 import com.eter.undiamas.core.data.local.initConnectivityContext
 import com.eter.undiamas.core.data.local.initDatabasePath
 import com.eter.undiamas.core.presentation.registerActivityForClose
 import com.eter.undiamas.core.presentation.unregisterActivityForClose
-import com.eter.undiamas.health.HealthDataExtractor
 import kotlinx.coroutines.CompletableDeferred
 
 class MainActivity : ComponentActivity() {
 
-    // Puente entre el ActivityResultContract (callback) y el mundo suspend del extractor.
-    private var pendingPermissions: CompletableDeferred<Set<String>>? = null
-
-    private val healthPermissionLauncher = registerForActivityResult(
-        PermissionController.createRequestPermissionResultContract(),
-    ) { granted -> pendingPermissions?.complete(granted) }
-
-    // Mismo puente para el permiso de notificaciones, que en Android 13+ hay que pedir.
+    // Puente entre el ActivityResultContract (callback) y el mundo suspend: en
+    // Android 13+ hay que pedir el permiso de notificaciones.
     private var permisoAvisos: CompletableDeferred<Boolean>? = null
 
     private val lanzadorPermisoAvisos = registerForActivityResult(
@@ -53,13 +44,6 @@ class MainActivity : ComponentActivity() {
         initDatabasePath(applicationContext.filesDir.resolve(DATABASE_FILE).absolutePath)
         initConnectivityContext(applicationContext)
 
-        // La dirección del backend la fija el buildType: en debug la de la wifi local, en
-        // release el dominio https de producción. Nunca queda escrita en el código común.
-        ApiConfig.configurar(
-            url = BuildConfig.API_BASE_URL,
-            permiteCambiar = BuildConfig.PERMITE_CAMBIAR_SERVIDOR,
-        )
-
         val preferences = UserPreferences()
 
         // Notificaciones locales: los recordatorios según el semáforo. Se le pasa la forma
@@ -77,15 +61,14 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val biometrics = HealthDataExtractor(applicationContext) { permissions ->
-            CompletableDeferred<Set<String>>().also { deferred ->
-                pendingPermissions = deferred
-                healthPermissionLauncher.launch(permissions)
-            }.await()
-        }
-
         setContent {
-            App(biometrics = biometrics, preferences = preferences, notificador = notificador)
+            // Lo decide la variante de compilación, no un ajuste de la app: una beta que
+            // se pudiera reconectar al servidor a mitad tendría los datos en dos sitios.
+            App(
+                preferences = preferences,
+                notificador = notificador,
+                modoLocal = BuildConfig.MODO_LOCAL,
+            )
         }
     }
 

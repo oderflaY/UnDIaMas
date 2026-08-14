@@ -31,7 +31,8 @@ import com.eter.undiamas.core.presentation.components.GradientCard
 import com.eter.undiamas.core.presentation.theme.PrimaryVioletBrush
 import com.eter.undiamas.core.presentation.theme.RiskRed
 
-private const val MIN_PASSWORD_LENGTH = 8
+/** Mismo mínimo al crear cuenta y al cambiar la contraseña: son la misma regla. */
+internal const val MIN_PASSWORD_LENGTH = 8
 
 /**
  * Entrada a la app: crear cuenta o iniciar sesión.
@@ -153,5 +154,26 @@ fun AuthScreen(state: AppState) {
                 if (isRegistering) "Ya tengo cuenta" else "Quiero crear una cuenta",
             )
         }
+
+        // Solo al iniciar sesión: en el alta no hay contraseña que recuperar todavía.
+        // Sin esto, quien la olvida solo puede crear otra cuenta, y otra cuenta significa
+        // volver a empezar la racha desde cero.
+        if (!isRegistering) {
+            TextButton(
+                onClick = { state.abrirRecuperacion(email) },
+                enabled = emailLooksValid,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    if (emailLooksValid) {
+                        "Olvidé mi contraseña"
+                    } else {
+                        "Escribe tu correo para recuperarla"
+                    },
+                )
+            }
+        }
     }
+
+    DialogoDeRecuperacion(state)
 }
